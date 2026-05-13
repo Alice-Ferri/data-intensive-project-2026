@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python (base)
+#     display_name: Python [conda env:base] *
 #     language: python
-#     name: base
+#     name: conda-base-py
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -53,6 +53,7 @@ pip install kagglehub[pandas-datasets]
 import kagglehub
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from kagglehub import KaggleDatasetAdapter
 
 # %% [markdown]
@@ -79,6 +80,9 @@ data_raw.tail()
 
 # %%
 data_raw.info(memory_usage="deep")
+
+# %% [markdown]
+# Inoltre si può notare che non sono presenti valori nulli nel dataset.
 
 # %% [markdown]
 # ### Significato delle features
@@ -135,3 +139,134 @@ ds.drop(columns=['cell_id',
 
 # %%
 ds.head(10)
+
+# %% [markdown]
+# ### Esplorazione dei dati
+
+# %%
+ds.describe()
+
+# %% [markdown]
+# Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
+
+# %%
+fare un esempio ? prendi da dataset
+
+# %%
+counts = ds['disease_category'].value_counts()
+num_categorie = len(counts)
+
+colori = plt.cm.tab10(range(num_categorie)) 
+
+plt.bar(counts.index, counts.values, color=colori)
+plt.title('Disease category')
+plt.xlabel('Categorie')
+plt.ylabel('Conteggio')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# Osservamo dal grafico a barre che la varabile target _disease_category_ risulta essere poco bilanciata, poichè il numero di istanze di tipo Normal_WBC è molto più significativa rispetto alle restanti categorie. Il problema in esame quindi risulta non essere bilanciato, si devono così applicare tecniche di bilanciamento ()..?
+
+# %%
+ds['anomaly_label'].value_counts().plot.pie(autopct='%1.1f%%')
+
+# %%
+
+# %% [markdown]
+# Si visualizzano le distribuzioni di tutte le variabili continue del dataset
+
+# %%
+plt.figure(figsize=(30, 24)) 
+
+plt.subplot(4, 4, 1)
+plt.title('Cell Diamater')
+plt.boxplot(ds['cell_diameter_um'])
+plt.ylabel('um')
+
+plt.subplot(4, 4, 2)
+plt.title('Nucleus Area')
+plt.boxplot(ds['nucleus_area_pct'])
+plt.ylabel('percentage')
+
+plt.subplot(4, 4, 3)
+plt.title('Chromatin Density')
+plt.boxplot(ds['chromatin_density'])
+plt.ylabel('score')
+
+plt.subplot(4, 4, 4)
+plt.title('Cytoplasm Ratio')
+plt.boxplot(ds['cytoplasm_ratio'])
+plt.ylabel('area ratio')
+
+plt.subplot(4, 4, 5)
+plt.title('Circularity')
+plt.boxplot(ds['circularity'])
+plt.ylabel('score')
+
+plt.subplot(4, 4, 6)
+plt.title('Eccentricity')
+plt.boxplot(ds['eccentricity'])
+plt.ylabel('score')
+
+plt.subplot(4, 4, 7)
+plt.title('Granularity')
+plt.boxplot(ds['granularity_score'])
+plt.ylabel('score')
+
+plt.subplot(4, 4, 8)
+plt.title('Lobularity')
+plt.boxplot(ds['lobularity_score'])
+plt.ylabel('score')
+
+plt.subplot(4, 4, 9)
+plt.title('Stain Intensity')
+plt.boxplot(ds['stain_intensity'])
+plt.ylabel('score')
+
+plt.subplot(4, 4, 10)
+plt.title('White Blood Cell')
+plt.boxplot(ds['wbc_count_per_ul'])
+plt.ylabel('count per microlitre')
+
+plt.subplot(4, 4, 11)
+plt.title('Red Blood Cell')
+plt.boxplot(ds['rbc_count_millions_per_ul'])
+plt.ylabel('count in millions per microlitre')
+
+plt.subplot(4, 4, 12)
+plt.title('Hemoglobin')
+plt.boxplot(ds['hemoglobin_g_dl'])
+plt.ylabel('g/dL')
+
+plt.subplot(4, 4, 13)
+plt.title('Hematocrit')
+plt.boxplot(ds['hematocrit_pct'])
+plt.ylabel('percentage')
+
+plt.subplot(4, 4, 14)
+plt.title('Platelet')
+plt.boxplot(ds['platelet_count_per_ul'])
+plt.ylabel('count per microlitre')
+
+plt.subplot(4, 4, 15)
+plt.title('Mean Corpuscular Volume')
+plt.boxplot(ds['mcv_fl'])
+plt.ylabel('percentage')
+
+plt.subplot(4, 4, 16)
+plt.title('Mean corpuscular Haemoglobin')
+plt.boxplot(ds['mchc_g_dl'])
+plt.ylabel('g/dL')
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# # in relazione variabili
+# ! score come emtrica da togliere? 
+# # cell_area_px e permiter_px da aggiungere?
+# # bilanciamento
+
+# %%
