@@ -1,0 +1,6 @@
+*.ipynb
+./.virtual_documents
+./.ipynb_checkpoints
+./anaconda_projects
+./.vscode
+.DS_Store
