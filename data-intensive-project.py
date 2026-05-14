@@ -150,8 +150,8 @@ ds.describe()
 # %% [markdown]
 # Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
 
-# %%
-fare un esempio ? prendi da dataset
+# %% [markdown]
+# fare un esempio ? prendi da dataset
 
 # %%
 counts = ds['disease_category'].value_counts()
@@ -168,99 +168,120 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Osservamo dal grafico a barre che la varabile target _disease_category_ risulta essere poco bilanciata, poichè il numero di istanze di tipo Normal_WBC è molto più significativa rispetto alle restanti categorie. Il problema in esame quindi risulta non essere bilanciato, si devono così applicare tecniche di bilanciamento ()..?
+# Osservando il grafico a barre è evidente che la varabile target _disease_category_ risulta essere poco bilanciata, poichè il numero di istanze di tipo Normal_WBC è molto più significativa rispetto alle restanti categorie. Il problema in esame quindi risulta non essere bilanciato, si devono così applicare tecniche di bilanciamento ()..?
 
 # %%
 ds['anomaly_label'].value_counts().plot.pie(autopct='%1.1f%%')
 
 # %% [markdown]
-# Si visualizzano le distribuzioni di tutte le variabili continue del dataset
+# Si visualizzano le distribuzioni di tutte le variabili continue del dataset, escludendo quelle non legate ai dati della cellula e in cui l'unità di misura è un punteggio attribuito su una scala di valori possibili. 
 
 # %%
-plt.figure(figsize=(30, 24)) 
+plt.figure(figsize=(25, 20)) 
 
-plt.subplot(4, 4, 1)
+plt.subplot(3, 3, 1)
 plt.title('Cell Diamater')
 plt.boxplot(ds['cell_diameter_um'])
 plt.ylabel('um')
 
-plt.subplot(4, 4, 2)
+plt.subplot(3, 3, 2)
 plt.title('Nucleus Area')
 plt.boxplot(ds['nucleus_area_pct'])
 plt.ylabel('percentage')
 
-plt.subplot(4, 4, 3)
-plt.title('Chromatin Density')
-plt.boxplot(ds['chromatin_density'])
-plt.ylabel('score')
-
-plt.subplot(4, 4, 4)
-plt.title('Cytoplasm Ratio')
-plt.boxplot(ds['cytoplasm_ratio'])
-plt.ylabel('area ratio')
-
-plt.subplot(4, 4, 5)
-plt.title('Circularity')
-plt.boxplot(ds['circularity'])
-plt.ylabel('score')
-
-plt.subplot(4, 4, 6)
-plt.title('Eccentricity')
-plt.boxplot(ds['eccentricity'])
-plt.ylabel('score')
-
-plt.subplot(4, 4, 7)
-plt.title('Granularity')
-plt.boxplot(ds['granularity_score'])
-plt.ylabel('score')
-
-plt.subplot(4, 4, 8)
-plt.title('Lobularity')
-plt.boxplot(ds['lobularity_score'])
-plt.ylabel('score')
-
-plt.subplot(4, 4, 9)
-plt.title('Stain Intensity')
-plt.boxplot(ds['stain_intensity'])
-plt.ylabel('score')
-
-plt.subplot(4, 4, 10)
+plt.subplot(3, 3, 3)
 plt.title('White Blood Cell')
 plt.boxplot(ds['wbc_count_per_ul'])
 plt.ylabel('count per microlitre')
 
-plt.subplot(4, 4, 11)
+plt.subplot(3, 3, 4)
 plt.title('Red Blood Cell')
 plt.boxplot(ds['rbc_count_millions_per_ul'])
 plt.ylabel('count in millions per microlitre')
 
-plt.subplot(4, 4, 12)
+plt.subplot(3, 3, 5)
 plt.title('Hemoglobin')
 plt.boxplot(ds['hemoglobin_g_dl'])
 plt.ylabel('g/dL')
 
-plt.subplot(4, 4, 13)
+plt.subplot(3, 3, 6)
 plt.title('Hematocrit')
 plt.boxplot(ds['hematocrit_pct'])
 plt.ylabel('percentage')
 
-plt.subplot(4, 4, 14)
+plt.subplot(3, 3, 7)
 plt.title('Platelet')
 plt.boxplot(ds['platelet_count_per_ul'])
 plt.ylabel('count per microlitre')
 
-plt.subplot(4, 4, 15)
+plt.subplot(3, 3, 8)
 plt.title('Mean Corpuscular Volume')
 plt.boxplot(ds['mcv_fl'])
 plt.ylabel('percentage')
 
-plt.subplot(4, 4, 16)
+plt.subplot(3, 3, 9)
 plt.title('Mean corpuscular Haemoglobin')
 plt.boxplot(ds['mchc_g_dl'])
 plt.ylabel('g/dL')
 
 plt.tight_layout()
 plt.show()
+
+# %%
+plt.figure(figsize=(25, 20)) 
+
+plt.subplot(3, 3, 1)
+plt.title('Cell Diamater')
+plt.hist(ds['cell_diameter_um'])
+plt.xlabel('um')
+
+plt.subplot(3, 3, 2)
+plt.title('Nucleus Area')
+plt.hist(ds['nucleus_area_pct'])
+plt.xlabel('percentage')
+
+plt.subplot(3, 3, 3)
+plt.title('White Blood Cell')
+plt.hist(ds['wbc_count_per_ul'])
+plt.xlabel('count per microlitre')
+
+plt.subplot(3, 3, 4)
+plt.title('Red Blood Cell')
+plt.hist(ds['rbc_count_millions_per_ul'])
+plt.xlabel('count in millions per microlitre')
+
+plt.subplot(3, 3, 5)
+plt.title('Hemoglobin')
+plt.hist(ds['hemoglobin_g_dl'])
+plt.xlabel('g/dL')
+
+plt.subplot(3, 3, 6)
+plt.title('Hematocrit')
+plt.hist(ds['hematocrit_pct'])
+plt.xlabel('percentage')
+
+plt.subplot(3, 3, 7)
+plt.title('Platelet')
+plt.hist(ds['platelet_count_per_ul'])
+plt.xlabel('count per microlitre')
+
+plt.subplot(3, 3, 8)
+plt.title('Mean Corpuscular Volume')
+plt.hist(ds['mcv_fl'])
+plt.xlabel('percentage')
+
+plt.subplot(3, 3, 9)
+plt.title('Mean corpuscular Haemoglobin')
+plt.hist(ds['mchc_g_dl'])
+plt.xlabel('g/dL')
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# ### Relazione tra variabili
+
+# %%
 
 # %% [markdown]
 # Dai grafici, in particolare i boxplot, e dalla tabella generata dal metodo describe si possono notare alcuni valori outliers per certe feature. 
@@ -270,7 +291,6 @@ plt.show()
 
 # %% [markdown]
 # # in relazione variabili
-# ! score come emtrica da togliere? 
 # # cell_area_px e permiter_px da aggiungere?
 # # bilanciamento
 
