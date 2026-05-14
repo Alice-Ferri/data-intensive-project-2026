@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python [conda env:base] *
+#     display_name: Python (base)
 #     language: python
-#     name: conda-base-py
+#     name: base
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -144,6 +144,7 @@ ds.head(10)
 # ### Esplorazione dei dati
 
 # %%
+pd.set_option('display.max_columns', None)
 ds.describe()
 
 # %% [markdown]
@@ -171,8 +172,6 @@ plt.show()
 
 # %%
 ds['anomaly_label'].value_counts().plot.pie(autopct='%1.1f%%')
-
-# %%
 
 # %% [markdown]
 # Si visualizzano le distribuzioni di tutte le variabili continue del dataset
@@ -262,6 +261,12 @@ plt.ylabel('g/dL')
 
 plt.tight_layout()
 plt.show()
+
+# %% [markdown]
+# Dai grafici, in particolare i boxplot, e dalla tabella generata dal metodo describe si possono notare alcuni valori outliers per certe feature. 
+# Tuttavia a seguito di analisi e ricerche si è appurato che tali valori sono accettabili e possono ricondursi a casistiche reali. È stato verificato che non vi sia dunque la presenza di valori completamente errati. 
+# Inoltre, per alcune feature i valori outlier sono proprio indicativi di anomalie delle cellule. 
+# Ad esempio nel caso dell'emoglobina valori bassi, che quindi si discostano tanto dalla media, sono indicatori di anemia
 
 # %% [markdown]
 # # in relazione variabili
