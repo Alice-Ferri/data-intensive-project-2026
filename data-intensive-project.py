@@ -27,7 +27,7 @@
 # Davide rossi, davide.rossi47@studio.unibo.it
 
 # %% [markdown]
-# ### Parte 1 - Descrizione del contesto del problema
+# # Parte 1 - Descrizione del contesto del problema
 
 # %% [markdown]
 # Il dataset di riferimento è [rilevamento di anomalie di cellule del sangue](https://www.kaggle.com/datasets/alitaqishah/blood-cell-anomaly-detection-2025/data) presente in Kaggle.
@@ -141,14 +141,7 @@ ds.drop(columns=['cell_id',
 ds.head(10)
 
 # %% [markdown]
-# ### Esplorazione dei dati
-
-# %%
-pd.set_option('display.max_columns', None)
-ds.describe()
-
-# %% [markdown]
-# Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
+# # Parte 2 - Esplorazione dei dati
 
 # %% [markdown]
 # fare un esempio ? prendi da dataset
@@ -172,6 +165,20 @@ plt.show()
 
 # %%
 ds['anomaly_label'].value_counts().plot.pie(autopct='%1.1f%%')
+
+# %% [markdown]
+# ## Analisi statistiche e valori outlier
+
+# %% [markdown]
+# Stampiamo le statistiche per le feature del dataset
+
+# %%
+pd.set_option('display.max_columns', None)
+ds.describe()
+
+# %% [markdown]
+# Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
+# Notiamo già che non sono presenti valori di massimi e minimi fuori da range accettabili per nessuna delle feature
 
 # %% [markdown]
 # Si visualizzano le distribuzioni di tutte le variabili continue del dataset, escludendo quelle non legate ai dati della cellula e in cui l'unità di misura è un punteggio attribuito su una scala di valori possibili. 
@@ -226,6 +233,12 @@ plt.ylabel('g/dL')
 
 plt.tight_layout()
 plt.show()
+
+# %% [markdown]
+# Dai grafici, in particolare i boxplot, e dalla tabella generata dal metodo describe si possono notare alcuni valori outliers per certe feature. 
+# Tuttavia a seguito di analisi e ricerche si è appurato che tali valori sono accettabili e possono ricondursi a casistiche reali. È stato verificato che non vi sia dunque la presenza di valori completamente errati. 
+# Inoltre, per alcune feature i valori outlier sono proprio indicativi di anomalie delle cellule. 
+# Ad esempio nel caso dell'emoglobina valori bassi, che quindi si discostano tanto dalla media, sono indicatori di anemia
 
 # %%
 plt.figure(figsize=(25, 20)) 
@@ -282,12 +295,6 @@ plt.show()
 # ### Relazione tra variabili
 
 # %%
-
-# %% [markdown]
-# Dai grafici, in particolare i boxplot, e dalla tabella generata dal metodo describe si possono notare alcuni valori outliers per certe feature. 
-# Tuttavia a seguito di analisi e ricerche si è appurato che tali valori sono accettabili e possono ricondursi a casistiche reali. È stato verificato che non vi sia dunque la presenza di valori completamente errati. 
-# Inoltre, per alcune feature i valori outlier sono proprio indicativi di anomalie delle cellule. 
-# Ad esempio nel caso dell'emoglobina valori bassi, che quindi si discostano tanto dalla media, sono indicatori di anemia
 
 # %% [markdown]
 # # in relazione variabili
