@@ -178,7 +178,7 @@ ds.describe()
 # Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
 # Notiamo già che non sono presenti valori di massimi e minimi fuori da range accettabili per nessuna delle feature
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Sezione superflua, eventualmente togliere o snellire
 
 # %% [markdown]
@@ -307,7 +307,7 @@ plt.xlabel('g/dL')
 plt.tight_layout()
 plt.show()
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Analisi feature legate all'immagine
 
 # %% [markdown]
@@ -407,6 +407,158 @@ sample.plot.scatter("cell_area_px", "perimeter_px",c=sample.disease_category.map
 # ### Relazione tra variabili
 
 # %%
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 1. Definiamo le feature che hai elencato
+features = [
+    'cell_diameter_um', 'nucleus_area_pct', 'wbc_count_per_ul', 
+    'rbc_count_millions_per_ul', 'hemoglobin_g_dl', 'hematocrit_pct', 
+    'platelet_count_per_ul', 'mcv_fl', 'mchc_g_dl'
+]
+
+# 2. Creiamo una mappa di colori per il target disease_category
+unique_categories = ds['disease_category'].unique()
+# Scegliamo una palette (es. tab10, set1, viridis)
+colors = plt.cm.get_cmap('tab10', len(unique_categories))
+category_color_map = {cat: colors(i) for i, cat in enumerate(unique_categories)}
+
+# 3. Campionamento (opzionale, se il dataset è molto grande per velocizzare il plot)
+sample_ds = ds.sample(min(2000, len(ds)))
+
+# 4. Generazione del grafico
+_ = pd.plotting.scatter_matrix(
+    sample_ds[features], 
+    c=sample_ds["disease_category"].map(category_color_map), 
+    alpha=0.4, 
+    figsize=(15, 15), 
+    marker="o",
+    s=20,
+    hist_kwds={"bins": 20, "color": "lightgray"}
+)
+
+plt.suptitle("Matrice di Correlazione tra Feature Ematologiche per Categoria", y=0.9)
+plt.show()
+
+# %%
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+cols = [
+    'cell_diameter_um', 'nucleus_area_pct', 'wbc_count_per_ul', 
+    'rbc_count_millions_per_ul', 'hemoglobin_g_dl', 'hematocrit_pct', 
+    'platelet_count_per_ul', 'mcv_fl', 'mchc_g_dl', 'disease_category'
+]
+
+# Creiamo il grafico
+# 'hue' crea la legenda automatica basata su disease_category
+g = sns.pairplot(ds[cols], hue='disease_category', palette='bright', diag_kind='kde')
+
+# Spostiamo la legenda per non coprire il grafico
+g._legend.set_bbox_to_anchor((1.05, 0.5))
+plt.show()
+
+# %%
+# 1. Calcoliamo le medie raggruppate per categoria
+# Selezioniamo solo le colonne che ci interessano
+df_means = ds.groupby('disease_category')[features_to_plot].mean()
+
+axes = df_means.plot(
+    kind='bar', 
+    subplots=True, 
+    layout=(3, 3), 
+    figsize=(18, 15), 
+    legend=False,
+    color='skyblue', # Colore unico per pulizia o una lista di colori
+    rot=45
+)
+
+for i, ax in enumerate(axes.flatten()):
+    if i >= len(features_to_plot): break # Evita errori se la griglia è più grande delle feature
+    
+    col_name = features_to_plot[i]
+    ax.set_title(f"Media: {col_name}", fontweight='bold')
+    ax.set_xlabel("")
+    
+    ax.set_ylim(0, ds[col_name].max() * 1.2)
+
+plt.tight_layout()
+plt.show()
+
+# %%
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Feature selezionate dal .describe per l'alta variabilità
+high_variance_features = [
+    'wbc_count_per_ul', 'platelet_count_per_ul', # Conteggi ematici
+    'nucleus_area_pct', 'chromatin_density',      # Dati nucleari
+    'cell_area_px', 'granularity_score'           # Morfologia complessa
+]
+
+# Raggruppamento per media
+df_means = ds.groupby('disease_category')[high_variance_features].mean()
+
+# Palette leggera (Pastel2 o Accent sono ottime per distinguere senza stancare)
+n_diseases = len(df_means.index)
+colors = plt.cm.get_cmap('Accent', n_diseases)(np.arange(n_diseases))
+
+# Creazione Griglia 2x3
+axes = df_means.plot(
+    kind='bar', 
+    subplots=True, 
+    layout=(2, 3), 
+    figsize=(18, 11), 
+    legend=False,
+    color=colors,
+    rot=45
+)
+
+for i, ax in enumerate(axes.flatten()):
+    if i >= len(high_variance_features):
+        ax.set_visible(False)
+        continue
+    
+    col_name = high_variance_features[i]
+    ax.set_title(f"Variazione Media: {col_name}", fontweight='bold', fontsize=14)
+    ax.set_xlabel("")
+    ax.yaxis.grid(True, linestyle='--', alpha=0.6)
+
+    # --- LOGICA DI ZOOM OTTIMIZZATA PER ALTA VARIANZA ---
+    val_min = df_means[col_name].min()
+    val_max = df_means[col_name].max()
+    
+    # Se la differenza tra la categoria più alta e la più bassa è minima (<15%)
+    # allora forziamo lo zoom per vedere la "regolarità" di cui parlavi
+    if val_max != 0 and (val_max - val_min) / val_max < 0.15:
+        margin = val_min * 0.05
+        ax.set_ylim(val_min - margin, val_max + margin)
+        ax.set_facecolor('#f9f9f9') # Sfondo grigio chiaro per indicare che è un grafico "zoomato"
+    else:
+        # Se c'è vera differenza, partiamo da zero per dare la giusta proporzione
+        ax.set_ylim(0, val_max * 1.2)
+
+plt.tight_layout()
+plt.show()
+
+# %%
+plt.figure(figsize=(15, 8))
+
+# Usiamo "Boxplot" per confrontare la dispersione
+# Esempio su nucleus_area_pct che nel tuo describe ha std=33 (moltissimo!)
+sns.boxplot(
+    data=ds, 
+    x='disease_category', 
+    y='nucleus_area_pct', 
+    palette='Set3',
+    hue='disease_category',
+    legend=False
+)
+
+plt.title('Analisi della Dispersione (Varianza) per Nucleus Area %', fontsize=16)
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.xticks(rotation=45)
+plt.show()
 
 # %% [markdown]
 # # in relazione variabili
