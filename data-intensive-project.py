@@ -143,9 +143,6 @@ ds.head(10)
 # %% [markdown]
 # # Parte 2 - Esplorazione dei dati
 
-# %% [markdown]
-# fare un esempio ? prendi da dataset
-
 # %%
 counts = ds['disease_category'].value_counts()
 num_categorie = len(counts)
@@ -161,7 +158,7 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Osservando il grafico a barre è evidente che la varabile target _disease_category_ risulta essere poco bilanciata, poichè il numero di istanze di tipo Normal_WBC è molto più significativa rispetto alle restanti categorie. Il problema in esame quindi risulta non essere bilanciato, si devono così applicare tecniche di bilanciamento ()..?
+# Osservando il grafico a barre è evidente che la varabile target _disease_category_ risulta essere poco bilanciata, poichè il numero di istanze di tipo Normal_WBC è molto più significativa rispetto alle restanti categorie. Il problema in esame quindi risulta non essere bilanciato, si proverà quindi ad applicare tecniche di bilanciamento come oversampling o undersampling
 
 # %%
 ds['anomaly_label'].value_counts().plot.pie(autopct='%1.1f%%')
@@ -175,6 +172,9 @@ ds['anomaly_label'].value_counts().plot.pie(autopct='%1.1f%%')
 # %%
 pd.set_option('display.max_columns', None)
 ds.describe()
+
+# %%
+ds.iloc[ds.cell_area_px > ds.image_resolution_px**2].sort_values(by="cell_area_px")
 
 # %% [markdown]
 # Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
@@ -300,5 +300,3 @@ plt.show()
 # # in relazione variabili
 # # cell_area_px e permiter_px da aggiungere?
 # # bilanciamento
-
-# %%
