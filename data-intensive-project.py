@@ -54,6 +54,7 @@ import kagglehub
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from kagglehub import KaggleDatasetAdapter
 
 # %% [markdown]
@@ -305,6 +306,102 @@ plt.xlabel('g/dL')
 
 plt.tight_layout()
 plt.show()
+
+# %% [markdown]
+# ### Analisi feature legate all'immagine
+
+# %% [markdown]
+# Le feature `cell_area_px perimeter_px mean_r mean_g mean_b microscope_model magnification_x image_resolution_px` sono tutte legate all'immagine della cellula (l'immagine non è presente nel dataset)
+
+# %%
+plt.figure(figsize=(25, 20)) 
+
+plt.subplot(3, 3, 1)
+plt.title('Cell area')
+plt.hist(ds['cell_area_px'])
+plt.xlabel('px')
+
+
+plt.subplot(3, 3, 2)
+plt.title('Cell perimeter')
+plt.hist(ds['perimeter_px'])
+plt.xlabel('px')
+
+
+plt.subplot(3, 3, 3)
+plt.title('Mean red')
+plt.hist(ds['mean_r'])
+plt.xlabel('px')
+
+
+plt.subplot(3, 3, 4)
+plt.title('Mean blue')
+plt.hist(ds['mean_b'])
+plt.xlabel('px')
+
+
+plt.subplot(3, 3, 5)
+plt.title('Mean green')
+plt.hist(ds['mean_g'])
+plt.xlabel('px')
+
+plt.tight_layout()
+plt.show()
+
+# %%
+# Plot cell_area_px grouped by disease_label
+ds.boxplot(column='cell_area_px', by='disease_category')
+
+# Clean up the automatic title formatting (optional)
+plt.title('Cell Area by Disease Label')
+plt.suptitle('') 
+plt.ylabel('Cell Area (px)')
+plt.xticks(rotation=45, ha='right')
+
+plt.tight_layout()
+plt.show()
+
+# %%
+# Plot cell_area_px grouped by disease_label
+ds.boxplot(column='perimeter_px', by='disease_category')
+
+# Clean up the automatic title formatting (optional)
+plt.title('Cell Perimeter by Disease Label')
+plt.suptitle('') 
+plt.ylabel('Cell Area (px)')
+plt.xticks(rotation=45, ha='right')
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# Correlazione tra feature legate all'immagine
+
+# %%
+correlation_df = ds[['cell_area_px' ,'perimeter_px' ,'mean_r' ,'mean_g' ,'mean_b' ]].corr()
+
+# %%
+
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+# Generate a mask for the upper triangle
+mask = np.zeros_like(correlation_df, dtype=np.bool)
+mask[np.triu_indices_from(mask)] = True
+
+# Set up the matplotlib figure
+f, ax = plt.subplots(figsize=(11, 9))
+# Draw the heatmap with the mask and correct aspect ratio
+sns.heatmap(correlation_df, mask=mask, cmap=cmap, vmax=.3, center=0,annot = True, square=True, linewidths=.5, cbar_kws={"shrink": .5});
+
+# %%
+disease_color_map = {"Leukemia" : "red",
+                    "Anemia" : "orange",
+                    "Sickle_Cell_Anemia" : "yellow",
+                    "Infection" : "green",
+                    "Artefact" : "black"}
+
+# %%
+sample = ds.sample(1000) 
+sample.plot.scatter("cell_area_px", "perimeter_px",c=sample.disease_category.map(disease_color_map).fillna("blue"))
 
 # %% [markdown]
 # ### Relazione tra variabili
