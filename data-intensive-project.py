@@ -173,12 +173,27 @@ ds['anomaly_label'].value_counts().plot.pie(autopct='%1.1f%%')
 pd.set_option('display.max_columns', None)
 ds.describe()
 
-# %%
-ds.iloc[ds.cell_area_px > ds.image_resolution_px**2].sort_values(by="cell_area_px")
-
 # %% [markdown]
 # Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
 # Notiamo già che non sono presenti valori di massimi e minimi fuori da range accettabili per nessuna delle feature
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# ### Sezione superflua, eventualmente togliere o snellire
+
+# %% [markdown]
+# Dopo una prima analisi dei valori sembrerebbe ci sia una discordanza fra
+# i valori delle feature `cell_area_px` e `image_resolution` in quanto il valore massimo della prima è maggiore del valore massimo della seconda. Queste feature rappresentano per ogni cellula i dati dell'immagine di acquisizione. Si sospetta che la feature cell_area_px possa contenere dei valori outlier
+#
+# Si selezionano i record dove `cell_area_px > image_resolution` e si nota che questa presunta anomalia è in realtà molto ricorrente nel dataset. Si deduce che la feature image_resolution non indichi il numero totale di pixel nell'immagine bensì la dimensione su un asse dell'immagine e che invece i pixel totali siano `image_resolution^2` . Si verifica che non ci siano cellule con area in px maggiore dell'area totale dell'immagine 
+
+# %%
+ds.iloc[ds.cell_area_px > ds.image_resolution_px].sort_values(by="cell_area_px")
+
+# %%
+ds.iloc[ds.cell_area_px > ds.image_resolution_px**2]
+
+# %% [markdown]
+# ### Distribuzioni
 
 # %% [markdown]
 # Si visualizzano le distribuzioni di tutte le variabili continue del dataset, escludendo quelle non legate ai dati della cellula e in cui l'unità di misura è un punteggio attribuito su una scala di valori possibili. 
