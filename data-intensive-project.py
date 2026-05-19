@@ -194,7 +194,7 @@ ds.iloc[ds.cell_area_px > ds.image_resolution_px].sort_values(by="cell_area_px")
 ds.iloc[ds.cell_area_px > ds.image_resolution_px**2]
 
 # %% [markdown]
-# ### Distribuzioni
+# ### Distribuzioni, rivedere valori outlier
 
 # %% [markdown]
 # Si visualizzano le distribuzioni di tutte le variabili continue del dataset, escludendo quelle non legate ai dati della cellula e in cui l'unità di misura è un punteggio attribuito su una scala di valori possibili. 
@@ -351,21 +351,61 @@ plt.xlabel('px')
 plt.tight_layout()
 plt.show()
 
+# %% [markdown]
+# Le dimensioni in pixel di componenti dell'immagine potrebbe dipendere dagli altri parametri relativi all'acquisizione dell'immagine quali `microscope_model magnification_x image_resolution_px` .
+# Creando un grafico boxplot per categorie si possono notare differenze nella distribuzione dei valori
+
 # %%
-plt.figure(figsize=(8, 6))
+plt.figure(figsize=(15, 10))
+
+plt.subplot(3,3,1)
 
 sns.boxplot(
     data=ds, 
     x='magnification_x', 
     y='cell_area_px', 
     palette='Set3',
-    hue='disease_category'
+    hue='magnification_x',
+    legend = False
 )
 
-plt.title('Analisi della Dispersione per Cell area', fontsize=16)
+plt.title('Cell area per magnification')
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.xticks(rotation=45)
+
+plt.subplot(3,3,2)
+
+sns.boxplot(
+    data=ds, 
+    x='image_resolution_px', 
+    y='cell_area_px', 
+    palette='Set3',
+    hue='image_resolution_px',
+    legend = False
+)
+
+plt.title('Cell area per image resolution')
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.xticks(rotation=45)
+
+plt.subplot(3,3,3)
+
+sns.boxplot(
+    data=ds, 
+    x='microscope_model', 
+    y='cell_area_px', 
+    palette='Set3',
+    hue='microscope_model',
+    legend = False
+)
+
+plt.title('Cell area per Microscope model')
 plt.grid(axis='y', linestyle='--', alpha=0.4)
 plt.xticks(rotation=45)
 plt.show()
+
+# %% [markdown]
+# Dai grafici si apprende che le caratteristiche relative all'acquisizione non hanno incidenza sulla distribuzione dei dati e che quindi `cell_area_px` non dipenda da queste variabili. Questo può essere dovuto al fatto che la feature `cell_area_px` fosse già stata normalizzata nel dataset o che siano state applicate altre forme di scaling o preprocessing dei dati
 
 # %% [markdown]
 # Le cellule malate potrebbero differire tra di loro per dimensione. Realizziamo un boxplot
@@ -389,7 +429,7 @@ plt.xticks(rotation=45)
 plt.show()
 
 # %% [markdown]
-# Notiamo che in base alla classe si ha una notevole differenza nella distribuzione dei valori. Inoltre le classi differiscono per dimensione dei range interquantili. 
+# Notiamo che in base alla classe si ha una notevole differenza nella distribuzione dei valori. Le classi differiscono fra loro nelle mediane e dimensioni dei range interquantili. 
 #
 # Questo ci suggerisce che la feature potrebbe essere informativa per predire la variabile target
 
@@ -404,7 +444,7 @@ print(correlation_df.iloc[1,0])
 # Si nota una forte correlazione, quindi si può presupporre che anche `perimeter_px` possa essere molto determinante
 # nella predizione. 
 #
-# Realizzando uno scatter plot si può verificare la presenza di cluster
+# Si realizza uno scatter plot per individuare meglio la presenza di cluster
 
 # %%
 disease_color_map = {"Leukemia" : "red",
@@ -418,9 +458,9 @@ sample = ds.sample(1000)
 sample.plot.scatter("cell_area_px", "perimeter_px",c=sample.disease_category.map(disease_color_map).fillna("blue"))
 
 # %% [markdown]
-# Si nota la formazione di cluster per alcune categorie di malattie. 
+# Si nota la formazione di cluster per alcune categorie di malattie. Si presuppone quindi che queste fearure 
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Relazione tra variabili
 
 # %%
