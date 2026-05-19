@@ -307,7 +307,13 @@ plt.xlabel('g/dL')
 plt.tight_layout()
 plt.show()
 
-# %% [markdown]
+# %%
+ds.pivot_table(index=ds.index, columns="disease_category", values="cell_diameter_um").plot.hist(bins=20, stacked=True, figsize=(12, 6));
+
+# %%
+ds.pivot_table(index=ds.index, columns="disease_category", values="nucleus_area_pct").plot.hist(bins=20, stacked=True, figsize=(12, 6));
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Analisi feature legate all'immagine
 
 # %% [markdown]
@@ -458,9 +464,9 @@ sample = ds.sample(1000)
 sample.plot.scatter("cell_area_px", "perimeter_px",c=sample.disease_category.map(disease_color_map).fillna("blue"))
 
 # %% [markdown]
-# Si nota la formazione di cluster per alcune categorie di malattie. Si presuppone quindi che queste fearure 
+# Si nota la formazione di cluster per alcune categorie di malattie. Si presuppone quindi che queste feature possano essere determinanti per la predizione della variabile target
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Relazione tra variabili
 
 # %%
