@@ -178,7 +178,7 @@ ds.describe()
 # Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
 # Notiamo già che non sono presenti valori di massimi e minimi fuori da range accettabili per nessuna delle feature
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Sezione superflua, eventualmente togliere o snellire
 
 # %% [markdown]
@@ -307,11 +307,14 @@ plt.xlabel('g/dL')
 plt.tight_layout()
 plt.show()
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Analisi feature legate all'immagine
 
 # %% [markdown]
 # Le feature `cell_area_px perimeter_px mean_r mean_g mean_b microscope_model magnification_x image_resolution_px` sono tutte legate all'immagine della cellula (l'immagine non è presente nel dataset)
+
+# %% [markdown]
+# Si creano gli istogrammi delle feature numeriche legate all'immagine per verificare la presenza di cluster
 
 # %%
 plt.figure(figsize=(25, 20)) 
@@ -349,48 +352,59 @@ plt.tight_layout()
 plt.show()
 
 # %%
-# Plot cell_area_px grouped by disease_label
-ds.boxplot(column='cell_area_px', by='disease_category')
+plt.figure(figsize=(8, 6))
 
-# Clean up the automatic title formatting (optional)
-plt.title('Cell Area by Disease Label')
-plt.suptitle('') 
-plt.ylabel('Cell Area (px)')
-plt.xticks(rotation=45, ha='right')
+sns.boxplot(
+    data=ds, 
+    x='magnification_x', 
+    y='cell_area_px', 
+    palette='Set3',
+    hue='disease_category'
+)
 
-plt.tight_layout()
-plt.show()
-
-# %%
-# Plot cell_area_px grouped by disease_label
-ds.boxplot(column='perimeter_px', by='disease_category')
-
-# Clean up the automatic title formatting (optional)
-plt.title('Cell Perimeter by Disease Label')
-plt.suptitle('') 
-plt.ylabel('Cell Area (px)')
-plt.xticks(rotation=45, ha='right')
-
-plt.tight_layout()
+plt.title('Analisi della Dispersione per Cell area', fontsize=16)
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.xticks(rotation=45)
 plt.show()
 
 # %% [markdown]
-# Correlazione tra feature legate all'immagine
+# Le cellule malate potrebbero differire tra di loro per dimensione. Realizziamo un boxplot
+# diviso per classe `disease_category` per vedere se la dispersione dei dati varia in base
+# alla classe
 
 # %%
-correlation_df = ds[['cell_area_px' ,'perimeter_px' ,'mean_r' ,'mean_g' ,'mean_b' ]].corr()
+plt.figure(figsize=(8, 6))
+
+sns.boxplot(
+    data=ds, 
+    x='disease_category', 
+    y='cell_area_px', 
+    palette='Set3',
+    hue='disease_category'
+)
+
+plt.title('Cell area per disease category', fontsize=16)
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.xticks(rotation=45)
+plt.show()
+
+# %% [markdown]
+# Notiamo che in base alla classe si ha una notevole differenza nella distribuzione dei valori. Inoltre le classi differiscono per dimensione dei range interquantili. 
+#
+# Questo ci suggerisce che la feature potrebbe essere informativa per predire la variabile target
+
+# %% [markdown]
+# Si suppone inoltre che ci sia una correlazione tra `perimeter_px` e `cell_area_px`. Calcoliamo l'indice di correlazione
 
 # %%
+correlation_df = ds[['cell_area_px' ,'perimeter_px']].corr()
+print(correlation_df.iloc[1,0])
 
-cmap = sns.diverging_palette(220, 10, as_cmap=True)
-# Generate a mask for the upper triangle
-mask = np.zeros_like(correlation_df, dtype=np.bool)
-mask[np.triu_indices_from(mask)] = True
-
-# Set up the matplotlib figure
-f, ax = plt.subplots(figsize=(11, 9))
-# Draw the heatmap with the mask and correct aspect ratio
-sns.heatmap(correlation_df, mask=mask, cmap=cmap, vmax=.3, center=0,annot = True, square=True, linewidths=.5, cbar_kws={"shrink": .5});
+# %% [markdown]
+# Si nota una forte correlazione, quindi si può presupporre che anche `perimeter_px` possa essere molto determinante
+# nella predizione. 
+#
+# Realizzando uno scatter plot si può verificare la presenza di cluster
 
 # %%
 disease_color_map = {"Leukemia" : "red",
@@ -402,6 +416,9 @@ disease_color_map = {"Leukemia" : "red",
 # %%
 sample = ds.sample(1000) 
 sample.plot.scatter("cell_area_px", "perimeter_px",c=sample.disease_category.map(disease_color_map).fillna("blue"))
+
+# %% [markdown]
+# Si nota la formazione di cluster per alcune categorie di malattie. 
 
 # %% [markdown]
 # ### Relazione tra variabili
