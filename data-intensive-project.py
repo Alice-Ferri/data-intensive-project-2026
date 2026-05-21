@@ -350,6 +350,100 @@ plt.show()
 # Per entrambe le feature si nota una separazione tra i vari IQR per classe, seppure nel caso di `cell diameter` si abbia comunque un po' di sovrapposizione. Nel caso di nucleus area invece si nota bene, la separazione fra alcune classi come _Normal_RBC_,_Normal_Platelet_,_Anemia_,_Sickle_Cell_Anemia_, che non hanno il nucleo, e _Leukemia_
 
 # %%
+pd.set_option('display.max_columns', None)
+ds.describe()
+
+# %% [markdown]
+# Si procede a realizzare gli istogrammi anche per le altre feature numeriche come punteggi legati a caratteristiche morfologiche della cellula
+
+# %%
+plt.figure(figsize=(25, 20)) 
+
+plt.subplot(3, 3, 1)
+plt.title('Chromatin density')
+plt.hist(ds['chromatin_density'])
+plt.xlabel('score')
+
+plt.subplot(3, 3, 2)
+plt.title('Cytoplasm ratio')
+plt.hist(ds['cytoplasm_ratio'])
+plt.xlabel('ratio')
+
+plt.subplot(3, 3, 3)
+plt.title('Circularity')
+plt.hist(ds['circularity'])
+plt.xlabel('score')
+
+plt.subplot(3, 3, 4)
+plt.title('Eccentricity')
+plt.hist(ds['eccentricity'])
+plt.xlabel('score')
+
+plt.subplot(3, 3, 5)
+plt.title('Granularity')
+plt.hist(ds['granularity_score'])
+plt.xlabel('score')
+
+plt.subplot(3, 3, 6)
+plt.title('Lobularity')
+plt.hist(ds['lobularity_score'])
+plt.xlabel('score')
+
+plt.subplot(3, 3, 7)
+plt.title('Membrane smoothness')
+plt.hist(ds['membrane_smoothness'])
+plt.xlabel('score')
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# Gli istogrammi rivelano la presenza di cluster e forti frequenze in alcuni range di valori. Di seguito un'analisi più approfondita mediante boxplot per classe
+
+# %%
+features = [
+    ('chromatin_density', 'score'),
+    ('cytoplasm_ratio', 'ratio'),
+    ('circularity', 'score'),
+    ('eccentricity', 'score'),
+    ('granularity_score', 'score'),
+    ('lobularity_score', 'score'),
+    ('membrane_smoothness', 'score')
+]
+
+fig, axes = plt.subplots(3, 3, figsize=(25, 20))
+axes = axes.flatten()
+
+for i, (col, unit) in enumerate(features):
+    sns.boxplot(
+        data=ds,
+        x='disease_category',
+        y=col,
+        palette='Set3',
+        hue='disease_category',
+        legend=False,
+        ax=axes[i]
+    )
+    
+    axes[i].set_title(col.replace('_', ' ').capitalize(), fontsize=14)
+    axes[i].set_xlabel('')  # Rimosso per pulizia grafica
+    axes[i].set_ylabel(unit)
+    axes[i].tick_params(axis='x', rotation=45)
+    axes[i].grid(axis='y', linestyle='--', alpha=0.4)
+
+# Nascondiamo eventuali subplot vuoti se le feature sono meno di 9
+for j in range(len(features), len(axes)):
+    fig.delaxes(axes[j])
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# Si nota generalmente, dai boxplot delle feature, che in base alla classe la distribuzione e dispersione dei valori varia.
+#
+# In particolare:
+#
+# *analisi dei singoli boxplot?*
 
 # %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Analisi feature legate all'immagine
