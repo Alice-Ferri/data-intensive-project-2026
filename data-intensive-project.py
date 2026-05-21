@@ -357,51 +357,7 @@ ds.describe()
 # Si procede a realizzare gli istogrammi anche per le altre feature numeriche come punteggi legati a caratteristiche morfologiche della cellula
 
 # %%
-plt.figure(figsize=(25, 20)) 
-
-plt.subplot(3, 3, 1)
-plt.title('Chromatin density')
-plt.hist(ds['chromatin_density'])
-plt.xlabel('score')
-
-plt.subplot(3, 3, 2)
-plt.title('Cytoplasm ratio')
-plt.hist(ds['cytoplasm_ratio'])
-plt.xlabel('ratio')
-
-plt.subplot(3, 3, 3)
-plt.title('Circularity')
-plt.hist(ds['circularity'])
-plt.xlabel('score')
-
-plt.subplot(3, 3, 4)
-plt.title('Eccentricity')
-plt.hist(ds['eccentricity'])
-plt.xlabel('score')
-
-plt.subplot(3, 3, 5)
-plt.title('Granularity')
-plt.hist(ds['granularity_score'])
-plt.xlabel('score')
-
-plt.subplot(3, 3, 6)
-plt.title('Lobularity')
-plt.hist(ds['lobularity_score'])
-plt.xlabel('score')
-
-plt.subplot(3, 3, 7)
-plt.title('Membrane smoothness')
-plt.hist(ds['membrane_smoothness'])
-plt.xlabel('score')
-
-plt.tight_layout()
-plt.show()
-
-# %% [markdown]
-# Gli istogrammi rivelano la presenza di cluster e forti frequenze in alcuni range di valori. Di seguito un'analisi più approfondita mediante boxplot per classe
-
-# %%
-features = [
+scores = [
     ('chromatin_density', 'score'),
     ('cytoplasm_ratio', 'ratio'),
     ('circularity', 'score'),
@@ -411,10 +367,25 @@ features = [
     ('membrane_smoothness', 'score')
 ]
 
+plt.figure(figsize=(25, 20)) 
+
+for i, (col, label) in enumerate(scores,1):
+    plt.subplot(3, 3, i)
+    plt.title(col)
+    plt.hist(ds[col])
+    plt.xlabel(label)
+
+plt.tight_layout()
+plt.show()
+
+# %% [markdown]
+# Gli istogrammi rivelano la presenza di cluster e forti frequenze in alcuni range di valori. Di seguito un'analisi più approfondita mediante boxplot per classe
+
+# %%
 fig, axes = plt.subplots(3, 3, figsize=(25, 20))
 axes = axes.flatten()
 
-for i, (col, unit) in enumerate(features):
+for i, (col, unit) in enumerate(scores):
     sns.boxplot(
         data=ds,
         x='disease_category',
@@ -425,8 +396,7 @@ for i, (col, unit) in enumerate(features):
         ax=axes[i]
     )
     
-    axes[i].set_title(col.replace('_', ' ').capitalize(), fontsize=14)
-    axes[i].set_xlabel('')  # Rimosso per pulizia grafica
+    axes[i].set_title(col, fontsize=14)
     axes[i].set_ylabel(unit)
     axes[i].tick_params(axis='x', rotation=45)
     axes[i].grid(axis='y', linestyle='--', alpha=0.4)
