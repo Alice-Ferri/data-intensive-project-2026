@@ -196,6 +196,8 @@ ds.iloc[ds.cell_area_px > ds.image_resolution_px**2]
 # %% [markdown]
 # ### Distribuzioni, rivedere valori outlier
 
+# %%
+
 # %% [markdown]
 # Si visualizzano le distribuzioni di tutte le variabili continue del dataset, escludendo quelle non legate ai dati della cellula e in cui l'unità di misura è un punteggio attribuito su una scala di valori possibili. 
 
@@ -307,11 +309,47 @@ plt.xlabel('g/dL')
 plt.tight_layout()
 plt.show()
 
-# %%
-ds.pivot_table(index=ds.index, columns="disease_category", values="cell_diameter_um").plot.hist(bins=20, stacked=True, figsize=(12, 6));
+# %% [markdown]
+# Per la maggior parte delle variabili si ha un distribuzione dei valori che somiglia a una curva normale, fatta eccezione per `cell_diameter_um nuclues_area_pct`. Realizziamo dei boxplot per categoria della variabile target per studiarne la dispersione
 
 # %%
-ds.pivot_table(index=ds.index, columns="disease_category", values="nucleus_area_pct").plot.hist(bins=20, stacked=True, figsize=(12, 6));
+plt.figure(figsize=(15, 8))
+
+sns.boxplot(
+    data=ds, 
+    x='disease_category', 
+    y='cell_diameter_um', 
+    palette='Set3',
+    hue='disease_category',
+    legend=False
+)
+
+plt.title('Analisi della Dispersione per Cell Diameter', fontsize=16)
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.xticks(rotation=45)
+plt.show()
+
+# %%
+plt.figure(figsize=(15, 8))
+
+sns.boxplot(
+    data=ds, 
+    x='disease_category', 
+    y='nucleus_area_pct', 
+    palette='Set3',
+    hue='disease_category',
+    legend=False
+)
+
+plt.title('Analisi della Dispersione per Nucleus Area %', fontsize=16)
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.xticks(rotation=45)
+plt.show()
+
+# %% [markdown]
+# Per entrambe le feature si nota una separazione tra i vari IQR per classe, seppure nel caso di `cell diameter` si abbia comunque un po' di sovrapposizione. Nel caso di nucleus area invece si nota bene, la separazione fra alcune classi come _Normal_RBC_,_Normal_Platelet_,_Anemia_,_Sickle_Cell_Anemia_, che non hanno il nucleo, e _Leukemia_
+
+# %%
 
 # %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Analisi feature legate all'immagine
@@ -604,23 +642,31 @@ for i, ax in enumerate(axes.flatten()):
 plt.tight_layout()
 plt.show()
 
+# %% [markdown]
+# ## Collinearità e relazione tra variabili
+
+# %% [markdown]
+# Calcoliamo gli indici di correlazione fra le feature del dataset e la variabile target, per comprendere quali feature potrebbero essere più utili per la nostra predizione e se ci sono relazioni inaspettate
+
 # %%
-plt.figure(figsize=(15, 8))
+# 1. Calculate the correlations
+# Replace 'df' with your actual dataframe and 'target' with your target column name
+numeric_features
+correlations = ds.corr(method='')['disease_category'].drop('disease_category')
 
-# Usiamo "Boxplot" per confrontare la dispersione
-# Esempio su nucleus_area_pct che nel tuo describe ha std=33 (moltissimo!)
-sns.boxplot(
-    data=ds, 
-    x='disease_category', 
-    y='nucleus_area_pct', 
-    palette='Set3',
-    hue='disease_category',
-    legend=False
-)
+# 2. Sort values to make the plot easier to read
+correlations = correlations.sort_values(ascending=False)
 
-plt.title('Analisi della Dispersione (Varianza) per Nucleus Area %', fontsize=16)
-plt.grid(axis='y', linestyle='--', alpha=0.4)
-plt.xticks(rotation=45)
+# 3. Create the plot
+plt.figure(figsize=(10, 6))
+sns.barplot(x=correlations.values, y=correlations.index, palette='coolwarm')
+
+# 4. Styling
+plt.title('Correlation of Features with Target Variable', fontsize=14)
+plt.xlabel('Correlation Coefficient')
+plt.axvline(x=0, color='black', linestyle='-', linewidth=1) # Baseline at zero
+plt.grid(axis='x', linestyle='--', alpha=0.5)
+plt.tight_layout()
 plt.show()
 
 # %% [markdown]
