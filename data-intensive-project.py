@@ -349,10 +349,6 @@ plt.show()
 # %% [markdown]
 # Per entrambe le feature si nota una separazione tra i vari IQR per classe, seppure nel caso di `cell diameter` si abbia comunque un po' di sovrapposizione. Nel caso di nucleus area invece si nota bene, la separazione fra alcune classi come _Normal_RBC_,_Normal_Platelet_,_Anemia_,_Sickle_Cell_Anemia_, che non hanno il nucleo, e _Leukemia_
 
-# %%
-pd.set_option('display.max_columns', None)
-ds.describe()
-
 # %% [markdown]
 # Si procede a realizzare gli istogrammi anche per le altre feature numeriche come punteggi legati a caratteristiche morfologiche della cellula
 
@@ -710,30 +706,51 @@ plt.show()
 # ## Collinearità e relazione tra variabili
 
 # %% [markdown]
-# Calcoliamo gli indici di correlazione fra le feature del dataset e la variabile target, per comprendere quali feature potrebbero essere più utili per la nostra predizione e se ci sono relazioni inaspettate
+# Calcoliamo gli indici di collinearità fra le feature numeriche del dataset per comprendere quali feature sono correlate e dunque hanno una relazione di dipendenza le une dalle altre
 
 # %%
-# 1. Calculate the correlations
-# Replace 'df' with your actual dataframe and 'target' with your target column name
-numeric_features
-correlations = ds.corr(method='')['disease_category'].drop('disease_category')
+numerical_features = [
+    'cell_diameter_um',
+    'nucleus_area_pct',
+    'chromatin_density',
+    'cytoplasm_ratio',
+    'circularity',
+    'eccentricity',
+    'granularity_score',
+    'lobularity_score',
+    'membrane_smoothness',
+    'cell_area_px',
+    'perimeter_px',
+    'mean_r',
+    'mean_g',
+    'mean_b',
+    'stain_intensity',
+    'wbc_count_per_ul',
+    'rbc_count_millions_per_ul',
+    'hemoglobin_g_dl',
+    'platelet_count_per_ul',
+    'mcv_fl',
+    'mchc_g_dl',
+    'magnification_x',
+    'image_resolution_px']
 
-# 2. Sort values to make the plot easier to read
-correlations = correlations.sort_values(ascending=False)
+correlations = ds[numerical_features].corr()
+cmap = sns.diverging_palette(220, 10, as_cmap=True)
+    # Generate a mask for the upper triangle
+mask = np.zeros_like(correlations, dtype=np.bool)    
+mask[np.triu_indices_from(mask)] = True
 
-# 3. Create the plot
-plt.figure(figsize=(10, 6))
-sns.barplot(x=correlations.values, y=correlations.index, palette='coolwarm')
+    # Set up the matplotlib figure
+f, ax = plt.subplots(figsize=(30, 20))
+    # Draw the heatmap with the mask and correct aspect ratio
+sns.heatmap(correlations, mask=mask, cmap=cmap, vmax=.3, center=0,annot = True, square=True, linewidths=.5, cbar_kws={"shrink": .5});
 
-# 4. Styling
-plt.title('Correlation of Features with Target Variable', fontsize=14)
-plt.xlabel('Correlation Coefficient')
-plt.axvline(x=0, color='black', linestyle='-', linewidth=1) # Baseline at zero
-plt.grid(axis='x', linestyle='--', alpha=0.5)
-plt.tight_layout()
-plt.show()
+# %% [markdown]
+# Dalla tabella notiamo come tutte le feature al di sotto della riga `stain_intensity` 
+# abbiano poca correlazione con il resto del dataset. Già dagli istogrammi si poteva osservare come queste feature assumessero una distribuzione alquanto più simile a una gaussiana e che quindi prbabilmente tali variabili assumessero una distribuzione normale e dunque indipendente da altri fattori
 
 # %% [markdown]
 # # in relazione variabili
-# # cell_area_px e permiter_px da aggiungere?
 # # bilanciamento
+
+# %%
