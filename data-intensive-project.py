@@ -736,21 +736,20 @@ numerical_features = [
 
 correlations = ds[numerical_features].corr()
 cmap = sns.diverging_palette(220, 10, as_cmap=True)
-    # Generate a mask for the upper triangle
 mask = np.zeros_like(correlations, dtype=np.bool)    
 mask[np.triu_indices_from(mask)] = True
 
-    # Set up the matplotlib figure
 f, ax = plt.subplots(figsize=(30, 20))
-    # Draw the heatmap with the mask and correct aspect ratio
 sns.heatmap(correlations, mask=mask, cmap=cmap, vmax=.3, center=0,annot = True, square=True, linewidths=.5, cbar_kws={"shrink": .5});
+
+# %% [markdown]
+# Dalla matrice di correlazione 
 
 # %% [markdown]
 # Dalla tabella notiamo come tutte le feature al di sotto della riga `stain_intensity` 
 # abbiano poca correlazione con il resto del dataset. Già dagli istogrammi si poteva osservare come queste feature assumessero una distribuzione alquanto più simile a una gaussiana e che quindi prbabilmente tali variabili assumessero una distribuzione normale e dunque indipendente da altri fattori
 
 # %% [markdown]
-# # in relazione variabili
 # # bilanciamento
 
 # %%
