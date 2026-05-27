@@ -176,9 +176,6 @@ ds.describe()
 # Notiamo già che non sono presenti valori di massimi e minimi fuori da range accettabili per nessuna delle feature
 
 # %% [markdown]
-# ### Sezione superflua, eventualmente togliere o snellire
-
-# %% [markdown]
 # Dopo una prima analisi dei valori sembrerebbe ci sia una discordanza fra
 # i valori delle feature `cell_area_px` e `image_resolution` in quanto il valore massimo della prima è maggiore del valore massimo della seconda. Queste feature rappresentano per ogni cellula i dati dell'immagine di acquisizione. Si sospetta che la feature cell_area_px possa contenere dei valori outlier
 #
@@ -191,7 +188,7 @@ ds.iloc[ds.cell_area_px > ds.image_resolution_px].sort_values(by="cell_area_px")
 ds.iloc[ds.cell_area_px > ds.image_resolution_px**2]
 
 # %% [markdown]
-# ### Distribuzioni, rivedere valori outlier
+# ### Distribuzioni
 
 # %% [markdown]
 # Si visualizzano le distribuzioni di tutte le variabili continue del dataset, escludendo quelle non legate ai dati della cellula e in cui l'unità di misura è un punteggio attribuito su una scala di valori possibili. 
@@ -400,10 +397,6 @@ for i, (col, unit) in enumerate(scores):
     axes[i].tick_params(axis='x', rotation=45)
     axes[i].grid(axis='y', linestyle='--', alpha=0.4)
 
-# Nascondiamo eventuali subplot vuoti se le feature sono meno di 9
-for j in range(len(features), len(axes)):
-    fig.delaxes(axes[j])
-
 plt.tight_layout()
 plt.show()
 
@@ -418,7 +411,9 @@ plt.show()
 # ### Analisi feature legate all'immagine
 
 # %% [markdown]
-# Le feature `cell_area_px perimeter_px mean_r mean_g mean_b microscope_model magnification_x image_resolution_px` sono tutte legate all'immagine della cellula (l'immagine non è presente nel dataset)
+# Le feature `cell_area_px perimeter_px mean_r mean_g mean_b microscope_model magnification_x image_resolution_px` sono tutte legate all'immagine della cellula (l'immagine non è presente nel dataset).
+#
+# In particolare `image_resolution_px` è la dimensione dell'immagine su un asse cartesiano
 
 # %% [markdown]
 # Si creano gli istogrammi delle feature numeriche legate all'immagine per verificare la presenza di cluster
@@ -622,11 +617,61 @@ f, ax = plt.subplots(figsize=(30, 20))
 sns.heatmap(correlations, mask=mask, cmap=cmap, center=0,annot = True, square=True, linewidths=.5, cbar_kws={"shrink": .5});
 
 # %% [markdown]
-# Dalla matrice di correlazione 
+# Dalla tabella notiamo come tutte le feature al di sotto della riga `stain_intensity` 
+# abbiano poca correlazione con il resto del dataset. Già dagli istogrammi si poteva osservare come queste feature assumessero una distribuzione alquanto più simile a una gaussiana e che quindi probabilmente tali variabili assumessero una distribuzione normale e dunque indipendente da altri fattori
 
 # %% [markdown]
-# Dalla tabella notiamo come tutte le feature al di sotto della riga `stain_intensity` 
-# abbiano poca correlazione con il resto del dataset. Già dagli istogrammi si poteva osservare come queste feature assumessero una distribuzione alquanto più simile a una gaussiana e che quindi prbabilmente tali variabili assumessero una distribuzione normale e dunque indipendente da altri fattori
+# Sempre guardando la matrice di correlazione si notano le seguenti relazioni:
+#
+# * `chromatin_density` e `nucleus_area_pct` : Questo risultato sembra sottolineare un possibile errore nei dati. Infatti, le due feature dovrebbero essere legate da una collinearità inversa, perchè più piccolo il nucleo maggiore dovrebbe essere la densità della cromatina (che è contenuta solo nel nucleo della cellula). È necessario fare ulteriori investigazioni per comprendere il significato di questo risultato, si sottolinea anche che `nucleus_area_pct` non è la dimensione assoluta del nucleo, ma è un dato che dipende dalla dimensione della cellula
+# * `cytoplasm_ratio` e `nucleus_area_pct` : le due feature sono inversamente correlate, era un risultato atteso in quanto il citoplasma occupa la parte di cellula non contenuta nel nucleo. Maggiore la dimensione del nucleo, minore lo spazio rimanente
+# * `cytoplasm_ratio` vs `chromatin_density` : Sempre a seguito delle osservazioni fatte su `chromatin_density` e `nucleus_area_pct` e `cytoplasm_ratio` e `nucleus_area_pct` si deduce come in realtà questo rislutato possa apparire come apparentemente errato
+# * `eccentricty` e `circularity` : i due punteggi hanno semanticamente significati opposti, è quindi atteso che ci fosse una collinearità inversa
+# * `cell_area_px` e `cell_diameter_um` : L'aumentare della misura del diametro è perfettamente in linea con una maggiore dimensione in pixel della cellula nella foto, si rammenta che i valori in pixel sono già stati normalizzati e non dipendono dall'immagine  
+# * `perimeter_px` e `cell_diameter_um` : Discorso analogo all'area della cellula
+# * `perimeter_px` e `cell_area_px`: Come mostrato in precedenza, cellule più grandi in termini di area corrispondono a un perimetro maggiore
+# * `mean_b`e `nucleus_area_pct`: Le immagini del dataset sono state acquisite a seguito del procedimento _Wright-Giemsa_ di macchiatura. Questa tecnica risalta i cromosomi nell'immagine colorandoli di blu. Un nucleo più grande implica che i cromosomi occupino più spazio nella foto, di conseguenza il colore blu sarà maggiormente predominante e questo porta ad alzare la media del valore del canale blu nella foto
+# * `mean_b` e `cytoplasm_ratio` : a partire dalla relazione fra `mean_b`e `nucleus_area_pct` e `cytoplasm_ratio` e `nucleus_area_pct` si può comprendere il perchè queste feature siano inversamente collineari
+
+# %% [markdown]
+# Si suppone che le feature `chromatin_density` e `nucleus_area_pct` abbiano un valore di collinearità così elevato perchè si ha una forte concentrazione di istanze attorno al valore 0, in entrambe le feature. Queste istanze sono date principalmente da piastrine (platelets) e globuli rossi che non hanno un nucleo. Analogalmente non avendo un nucleo queste cellule avranno anche un valore di cromatina vicino allo 0
+
+# %%
+ds[(ds.nucleus_area_pct == 0)][['cell_type','disease_category','nucleus_area_pct','chromatin_density']]
+
+# %% [markdown]
+# Si prova a fare uno studio della collinearità più approfondito escludendo queste cellule
+
+# %%
+cells_wit_nucleus = ds[(ds.chromatin_density != 0) & (ds.nucleus_area_pct != 0)]
+cells_wit_nucleus.plot.scatter("chromatin_density", "nucleus_area_pct")
+cells_wit_nucleus[['chromatin_density','nucleus_area_pct']].corr()
+
+# %% [markdown]
+# Si nota che il valore di correlazione è calato drasticamente, guardando il nuovo valore si potrebbe dire che le feature sono debolmente correlate.
+#
+# Andando più a fondo si evidenzia come nucleus_area_pct, per definizione, non è una misura assoluta della dimensione del nucleo bensì relativa aslla dimensione totale della cellula. Invece la densità della cromatina dovrebbe dipendere dalla dimensione del nucleo in termini assoluti. Non è quindi informativo svolgere un confronto diretto tra le due variabili. Ad esempio, alcune cellule potrebbero avere un nucleo molto grande rapportato al volume totale (`nucleus_area_pct` alto) pur rimanendo cellule "piccole" con un nucleo "piccolo" e quindi avere valori di cromatina alti.
+#
+# Si prova a stimare una misura assoluta delle dimensioni del nucleo, creando una feature calcolata, e si esegue un'ulteriore analisi.
+
+# %%
+nucleus_area_px = ((cells_wit_nucleus.nucleus_area_pct/100) * cells_wit_nucleus.cell_area_px)
+
+# %%
+cells_wit_nucleus.insert(1,'nucleus_area_px',nucleus_area_px) 
+
+# %%
+cells_wit_nucleus.plot.scatter("chromatin_density", "nucleus_area_px")
+cells_wit_nucleus[['chromatin_density','nucleus_area_px']].corr()
+
+# %% [markdown]
+# Le due variabili risultano essere moderatamente correlate negativamente, e questo risultato è in linea con il comportamento che la scienza ci dice dovrebbe verificarsi. 
+#
+# Da questo si deduce che la forte correlazione che avevamo osservato in origine è in realtà un artefatto dovuto alla distribuzione dei dati molto sbilanciata verso lo 0 per le due feature, dovuta a quelle tipologie di cellule che non hanno un nucleo. 
+#
+# Si procede a mantenere il dataset nello stato corrente verrà poi osservato nella fase di allenamento l'incidenza delle feature ed eventualmente si progetteranno soluzioni che considerano questo problema con il fine di migliorare l'accuratezza dei modelli.
+#
+# Eventualmente, si potrebbe considerare l'introduzione della variabile calcolata `nucleus_area_px`
 
 # %% [markdown]
 # # Preparazione dei dati
@@ -642,9 +687,6 @@ sns.heatmap(correlations, mask=mask, cmap=cmap, center=0,annot = True, square=Tr
 target = ds['disease_category']
 ds.drop(columns=['disease_category', 'anomaly_label', 'cell_type'], inplace=True)
 
-# %%
-ds
-
 # %% [markdown]
 # Essendo presenti features categoriche si procede a processare i dati attraverso il One-Hot Encoding
 
@@ -657,7 +699,6 @@ to_encode = ['patient_age_group',
                  'image_resolution_px']
 
 ds = pd.get_dummies(ds, columns=to_encode, dtype=int)
-ds
 
 # %% [markdown]
 # # bilanciamento
