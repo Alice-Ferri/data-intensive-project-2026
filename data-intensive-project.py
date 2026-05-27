@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python (base)
+#     display_name: Python [conda env:base] *
 #     language: python
-#     name: base
+#     name: conda-base-py
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -161,9 +161,6 @@ plt.show()
 # %% [markdown]
 # Osservando il grafico a barre è evidente che la varabile target _disease_category_ risulta essere poco bilanciata, poichè il numero di istanze di tipo Normal_WBC è molto più significativa rispetto alle restanti categorie. Il problema in esame quindi risulta non essere bilanciato, si proverà quindi ad applicare tecniche di bilanciamento come oversampling o undersampling
 
-# %%
-ds['anomaly_label'].value_counts().plot.pie(autopct='%1.1f%%')
-
 # %% [markdown]
 # ## Analisi statistiche e valori outlier
 
@@ -178,7 +175,7 @@ ds.describe()
 # Come si osserva dalla descrizione del dataset, si rilevano media, valore massimo, valore minimo, deviazione standard e percentili di ogni features.
 # Notiamo già che non sono presenti valori di massimi e minimi fuori da range accettabili per nessuna delle feature
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Sezione superflua, eventualmente togliere o snellire
 
 # %% [markdown]
@@ -195,8 +192,6 @@ ds.iloc[ds.cell_area_px > ds.image_resolution_px**2]
 
 # %% [markdown]
 # ### Distribuzioni, rivedere valori outlier
-
-# %%
 
 # %% [markdown]
 # Si visualizzano le distribuzioni di tutte le variabili continue del dataset, escludendo quelle non legate ai dati della cellula e in cui l'unità di misura è un punteggio attribuito su una scala di valori possibili. 
@@ -253,10 +248,18 @@ plt.tight_layout()
 plt.show()
 
 # %% [markdown]
-# Dai grafici, in particolare i boxplot, e dalla tabella generata dal metodo describe si possono notare alcuni valori outliers per certe feature. 
-# Tuttavia a seguito di analisi e ricerche si è appurato che tali valori sono accettabili e possono ricondursi a casistiche reali. È stato verificato che non vi sia dunque la presenza di valori completamente errati. 
-# Inoltre, per alcune feature i valori outlier sono proprio indicativi di anomalie delle cellule. 
-# Ad esempio nel caso dell'emoglobina valori bassi, che quindi si discostano tanto dalla media, sono indicatori di anemia
+# Dai grafici, in particolare i boxplot, e dalla tabella generata dal metodo _describe()_ si possono notare alcuni valori outliers per certe features. 
+# A seguito di analisi e ricerche si è appurato che tali valori sono accettabili e possono ricondursi a casistiche reali. È stato verificato che non vi sia dunque la presenza di valori completamente errati.
+#
+# Per le features _cell_diameter_um_ e _platelet_count_per_ul_ l'analisi ha evidenziato per ciascuna un singolo elemento outlier che si discosta significativamente dalla distribuzione dei valori.
+# Risultano essere elementi estremi che potrebbero indurre il modello a errori di apprendimento, compromettendo la sua stabilità.
+#
+# Quindi, pur trattandosi di dati reali e corretti dal punto di vista clinico, si è scelto di rimuovere questi due specifici record dal dataset prima della fase di modellazione.
+
+# %%
+ds.drop(ds[ds['cell_diameter_um'] > 20].index, inplace=True)
+
+ds.drop(ds[ds['platelet_count_per_ul'] > 540000].index, inplace=True)
 
 # %%
 plt.figure(figsize=(25, 20)) 
@@ -411,7 +414,7 @@ plt.show()
 #
 # *analisi dei singoli boxplot?*
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Analisi feature legate all'immagine
 
 # %% [markdown]
@@ -559,148 +562,24 @@ disease_color_map = {"Leukemia" : "red",
 
 # %%
 sample = ds.sample(1000) 
-sample.plot.scatter("cell_area_px", "perimeter_px",c=sample.disease_category.map(disease_color_map).fillna("blue"))
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+for category, group in sample.groupby("disease_category"):
+    color = disease_color_map.get(category, "blue")
+    
+    group.plot.scatter(
+        x="cell_area_px", 
+        y="perimeter_px", 
+        c=color, 
+        label=category,
+        ax=ax
+    )
+
+ax.legend(title="Disease Category")
 
 # %% [markdown]
 # Si nota la formazione di cluster per alcune categorie di malattie. Si presuppone quindi che queste feature possano essere determinanti per la predizione della variabile target
-
-# %% [markdown]
-# ### Relazione tra variabili
-
-# %%
-import pandas as pd
-import matplotlib.pyplot as plt
-
-# 1. Definiamo le feature che hai elencato
-features = [
-    'cell_diameter_um', 'nucleus_area_pct', 'wbc_count_per_ul', 
-    'rbc_count_millions_per_ul', 'hemoglobin_g_dl', 'hematocrit_pct', 
-    'platelet_count_per_ul', 'mcv_fl', 'mchc_g_dl'
-]
-
-# 2. Creiamo una mappa di colori per il target disease_category
-unique_categories = ds['disease_category'].unique()
-# Scegliamo una palette (es. tab10, set1, viridis)
-colors = plt.cm.get_cmap('tab10', len(unique_categories))
-category_color_map = {cat: colors(i) for i, cat in enumerate(unique_categories)}
-
-# 3. Campionamento (opzionale, se il dataset è molto grande per velocizzare il plot)
-sample_ds = ds.sample(min(2000, len(ds)))
-
-# 4. Generazione del grafico
-_ = pd.plotting.scatter_matrix(
-    sample_ds[features], 
-    c=sample_ds["disease_category"].map(category_color_map), 
-    alpha=0.4, 
-    figsize=(15, 15), 
-    marker="o",
-    s=20,
-    hist_kwds={"bins": 20, "color": "lightgray"}
-)
-
-plt.suptitle("Matrice di Correlazione tra Feature Ematologiche per Categoria", y=0.9)
-plt.show()
-
-# %%
-import seaborn as sns
-import matplotlib.pyplot as plt
-
-cols = [
-    'cell_diameter_um', 'nucleus_area_pct', 'wbc_count_per_ul', 
-    'rbc_count_millions_per_ul', 'hemoglobin_g_dl', 'hematocrit_pct', 
-    'platelet_count_per_ul', 'mcv_fl', 'mchc_g_dl', 'disease_category'
-]
-
-# Creiamo il grafico
-# 'hue' crea la legenda automatica basata su disease_category
-g = sns.pairplot(ds[cols], hue='disease_category', palette='bright', diag_kind='kde')
-
-# Spostiamo la legenda per non coprire il grafico
-g._legend.set_bbox_to_anchor((1.05, 0.5))
-plt.show()
-
-# %%
-# 1. Calcoliamo le medie raggruppate per categoria
-# Selezioniamo solo le colonne che ci interessano
-df_means = ds.groupby('disease_category')[features_to_plot].mean()
-
-axes = df_means.plot(
-    kind='bar', 
-    subplots=True, 
-    layout=(3, 3), 
-    figsize=(18, 15), 
-    legend=False,
-    color='skyblue', # Colore unico per pulizia o una lista di colori
-    rot=45
-)
-
-for i, ax in enumerate(axes.flatten()):
-    if i >= len(features_to_plot): break # Evita errori se la griglia è più grande delle feature
-    
-    col_name = features_to_plot[i]
-    ax.set_title(f"Media: {col_name}", fontweight='bold')
-    ax.set_xlabel("")
-    
-    ax.set_ylim(0, ds[col_name].max() * 1.2)
-
-plt.tight_layout()
-plt.show()
-
-# %%
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Feature selezionate dal .describe per l'alta variabilità
-high_variance_features = [
-    'wbc_count_per_ul', 'platelet_count_per_ul', # Conteggi ematici
-    'nucleus_area_pct', 'chromatin_density',      # Dati nucleari
-    'cell_area_px', 'granularity_score'           # Morfologia complessa
-]
-
-# Raggruppamento per media
-df_means = ds.groupby('disease_category')[high_variance_features].mean()
-
-# Palette leggera (Pastel2 o Accent sono ottime per distinguere senza stancare)
-n_diseases = len(df_means.index)
-colors = plt.cm.get_cmap('Accent', n_diseases)(np.arange(n_diseases))
-
-# Creazione Griglia 2x3
-axes = df_means.plot(
-    kind='bar', 
-    subplots=True, 
-    layout=(2, 3), 
-    figsize=(18, 11), 
-    legend=False,
-    color=colors,
-    rot=45
-)
-
-for i, ax in enumerate(axes.flatten()):
-    if i >= len(high_variance_features):
-        ax.set_visible(False)
-        continue
-    
-    col_name = high_variance_features[i]
-    ax.set_title(f"Variazione Media: {col_name}", fontweight='bold', fontsize=14)
-    ax.set_xlabel("")
-    ax.yaxis.grid(True, linestyle='--', alpha=0.6)
-
-    # --- LOGICA DI ZOOM OTTIMIZZATA PER ALTA VARIANZA ---
-    val_min = df_means[col_name].min()
-    val_max = df_means[col_name].max()
-    
-    # Se la differenza tra la categoria più alta e la più bassa è minima (<15%)
-    # allora forziamo lo zoom per vedere la "regolarità" di cui parlavi
-    if val_max != 0 and (val_max - val_min) / val_max < 0.15:
-        margin = val_min * 0.05
-        ax.set_ylim(val_min - margin, val_max + margin)
-        ax.set_facecolor('#f9f9f9') # Sfondo grigio chiaro per indicare che è un grafico "zoomato"
-    else:
-        # Se c'è vera differenza, partiamo da zero per dare la giusta proporzione
-        ax.set_ylim(0, val_max * 1.2)
-
-plt.tight_layout()
-plt.show()
 
 # %% [markdown]
 # ## Collinearità e relazione tra variabili
@@ -740,7 +619,7 @@ mask = np.zeros_like(correlations, dtype=np.bool)
 mask[np.triu_indices_from(mask)] = True
 
 f, ax = plt.subplots(figsize=(30, 20))
-sns.heatmap(correlations, mask=mask, cmap=cmap, vmax=.3, center=0,annot = True, square=True, linewidths=.5, cbar_kws={"shrink": .5});
+sns.heatmap(correlations, mask=mask, cmap=cmap, center=0,annot = True, square=True, linewidths=.5, cbar_kws={"shrink": .5});
 
 # %% [markdown]
 # Dalla matrice di correlazione 
@@ -750,6 +629,35 @@ sns.heatmap(correlations, mask=mask, cmap=cmap, vmax=.3, center=0,annot = True, 
 # abbiano poca correlazione con il resto del dataset. Già dagli istogrammi si poteva osservare come queste feature assumessero una distribuzione alquanto più simile a una gaussiana e che quindi prbabilmente tali variabili assumessero una distribuzione normale e dunque indipendente da altri fattori
 
 # %% [markdown]
-# # bilanciamento
+# # Preparazione dei dati
+
+# %% [markdown]
+# Si preparano ora i dati per essere elaborati dal modello.
+#
+# Si eliminano le features _anomaly_label_ e _cell_type_ poichè porterebbero ad un'apprendimento diretto. L'obiettivo del nostro modello è predire la _disease_category_ date le informazioni strettamente legate alla analisi della cellula, e non predire la malattia conoscendo giè il tipo di cellula o se l'elemento stesso è anomalo.
+#
+# Si procede inoltre a isolare anche la variabile target _disease_cateogry_ da predire.
 
 # %%
+target = ds['disease_category']
+ds.drop(columns=['disease_category', 'anomaly_label', 'cell_type'], inplace=True)
+
+# %%
+ds
+
+# %% [markdown]
+# Essendo presenti features categoriche si procede a processare i dati attraverso il One-Hot Encoding
+
+# %%
+to_encode = ['patient_age_group',
+                'patient_sex',
+                'staining_protocol',
+                 'microscope_model',
+                 'magnification_x',
+                 'image_resolution_px']
+
+ds = pd.get_dummies(ds, columns=to_encode, dtype=int)
+ds
+
+# %% [markdown]
+# # bilanciamento
