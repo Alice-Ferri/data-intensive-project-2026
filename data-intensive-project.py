@@ -701,4 +701,40 @@ to_encode = ['patient_age_group',
 ds = pd.get_dummies(ds, columns=to_encode, dtype=int)
 
 # %% [markdown]
+# Si importano le librerie necessarie.
+
+# %%
+from sklearn.model_selection import KFold
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+
+# %%
+std_lr = Pipeline([
+    ('std', StandardScaler()),
+    ('lr', LogisticRegression(dual=False))
+])
+
+parameters = {
+    'lr__penalty': ['l1'],
+    'lr__tol': [1e-9, 1e-6, 1e-3, 1e-2, 1e-1, 1],
+    'lr__C': [1, 0.8, 0.3],
+    'lr__solver': ['liblinear']
+}
+
+lr_gs = GridSearchCV(std_lr, parameters, cv=5, n_jobs=-1, return_train_score=True, scoring='f1')
+lr_gs.fit(X_train, y_train)
+print("Grid search finish")
+
+# %%
+print('Best parameters:', lr_gs.best_params_)  
+print('Best train score: {:.4f}%\nBest validation score: {:.4f}%'.format(round(lr_gs.best_score_ * 100, 4), round(lr_gs.score(X_val, y_val)*100, 4)))
+
+# %% [markdown]
 # # bilanciamento
