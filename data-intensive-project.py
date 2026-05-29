@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python [conda env:base] *
+#     display_name: Python (base)
 #     language: python
-#     name: conda-base-py
+#     name: base
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -676,6 +676,17 @@ cells_wit_nucleus[['chromatin_density','nucleus_area_px']].corr()
 # %% [markdown]
 # # Preparazione dei dati
 
+# %%
+to_encode = ['patient_age_group',
+                'patient_sex',
+                'staining_protocol',
+                 'microscope_model',
+                 'magnification_x',
+                 'image_resolution_px',
+            ]
+
+ds = pd.get_dummies(ds, columns=to_encode, dtype=int)
+
 # %% [markdown]
 # Si preparano ora i dati per essere elaborati dal modello.
 #
@@ -691,14 +702,29 @@ ds.drop(columns=['disease_category', 'anomaly_label', 'cell_type'], inplace=True
 # Essendo presenti features categoriche si procede a processare i dati attraverso il One-Hot Encoding
 
 # %%
-to_encode = ['patient_age_group',
-                'patient_sex',
-                'staining_protocol',
-                 'microscope_model',
-                 'magnification_x',
-                 'image_resolution_px']
+target = pd.get_dummies(target.to_frame(), columns=['disease_category'], dtype=int)
 
-ds = pd.get_dummies(ds, columns=to_encode, dtype=int)
+# %%
+target.info()
+
+# %%
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(ds, target, test_size=0.3, random_state=43, stratify=target.values)
+
+# %%
+X_train.head()
+
+# %% [markdown]
+# # Addestramento e validazione
+
+# %%
+y_train.head()
+
+# %% [markdown]
+# ## Perceptron
+
+# %%
 
 # %% [markdown]
 # # bilanciamento
