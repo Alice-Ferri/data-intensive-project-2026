@@ -702,9 +702,6 @@ ds.drop(columns=['disease_category', 'anomaly_label', 'cell_type'], inplace=True
 # Essendo presenti features categoriche si procede a processare i dati attraverso il One-Hot Encoding
 
 # %%
-target = pd.get_dummies(target.to_frame(), columns=['disease_category'], dtype=int)
-
-# %%
 target.info()
 
 # %%
@@ -721,10 +718,59 @@ X_train.head()
 # %%
 y_train.head()
 
+y_train.shape
+
+# %%
+y_train.info()
+
+# %%
+y_train.head()
+
 # %% [markdown]
 # ## Perceptron
 
 # %%
+from sklearn.model_selection import GridSearchCV
+from sklearn import metrics
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import Perceptron
+from sklearn.preprocessing import StandardScaler
+
+poly_perceptron = Pipeline([
+    ('std', StandardScaler()),
+    ('perceptron', Perceptron(n_jobs=-2, early_stopping=True,))
+])
+
+parameters = {
+    'std': [None, StandardScaler()],
+    'perceptron__penalty': [None, 'l1', 'l2', 'elasticnet'],
+    'perceptron__alpha': [0.0001, 0.001, 0.01, 1],
+    'perceptron__tol': [1e-9, 1e-6, 1e-3, 1, 1e3, 1e6],
+}
+
+perceptron_cv = GridSearchCV(poly_perceptron, parameters, n_jobs=-2, scoring='f1_macro')
+
+# %%
+perceptron_cv.fit(X_train, y_train)
+print('GridSearch on Perceptron finish')
+
+# %%
+print('Best parameters:', perceptron_cv.best_params_)  
+print('Best score: {:.4f}%'.format(round(perceptron_cv.best_score_ * 100, 4)))
+
+# %%
+from sklearn.metrics import classification_report
+
+pred = perceptron_cv.predict(X_v)
+classification_report(y_val, pred)
+
+
+# %%
+from sklearn.metrics import mean_squared_error
+
+perc_mse = mean_squared_error(y_test, perceptron_cv.predict(X_test))
+print('MSE: {}'.format(perc_mse))
 
 # %% [markdown]
 # # bilanciamento
