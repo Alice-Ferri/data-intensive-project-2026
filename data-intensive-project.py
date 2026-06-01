@@ -806,14 +806,17 @@ coeff[coeff == 0]
 dump_statistics(perceptron_search,X_train,X_test,y_train,y_test)
 
 # %%
-cm = confusion_matrix(y_test, y_test_pred)
-plot_confusion_matrix(cm, perceptron_cv.classes_)
+cm = confusion_matrix(y_test, perceptron_search.predict(X_test))
+plot_confusion_matrix(cm, perceptron_search.classes_)
 
 # %% [markdown]
 # Dalla matrice di confusione si nota che il modello fatica a distinguere fra le classi Anemia, Normal_RBC e Sickle_cell_anemia. Questo è comprensibile in quanto sono tutte condizioni di malattia legate ai globuli rossi (Normal_RBC). 
 # Analogalmente si nota una difficoltà nella classificazione di Infection e Normal_WBC, in particolare il modello fatica a classificare le cellule di classe infezione come tali. Ciò può essere legato a motivazioni analoghe a Normal_RBC e alla mancanza di bilanciamento delle classi
 # Forte errore fra anemia e Normal_RBC
 # anche fra infezione e normal_WBC
+
+# %%
+coeff.nlargest(4).plot(kind='barh')
 
 # %% [markdown]
 # Si fa un secondo tentativo con l'espansione polinomiale e l'impostazione _balanced_ per il perceptron che regola l'aggiustamento dei pesi in base al bilanciamento delle classi
