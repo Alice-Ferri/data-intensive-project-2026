@@ -767,12 +767,12 @@ def dump_statistics(model,X_train,X_test,y_train,y_test):
 # ## Perceptron
 
 # %% [markdown]
-# Si allena un semplice perceptron e si analizza il comportamento
+# Si allena un semplice perceptron e si analizza il comportamento, siccome dall'analisi si è notato che il dataset ha un forte sbilanciamento fra classi usiamo l'impostazione _balanced_ per il perceptron che regola l'aggiustamento dei pesi in base al bilanciamento delle classi
 
 # %%
 std_perceptron = Pipeline([
     ('std', StandardScaler()),
-    ('perceptron', Perceptron(n_jobs=-2, early_stopping=True,))
+    ('perceptron', Perceptron(n_jobs=-2, early_stopping=True,class_weight='balanced'))
 ])
 
 parameters = {
@@ -793,7 +793,7 @@ print('Best parameters:', perceptron_search.best_params_)
 # %% [markdown]
 # Notiamo in particolare che la grid search ha selezionato una versione che attua normalizzazione sulle feature, il che è comprensibile viste le disparate scale e range di valori, e una regolarizzazione l1.
 #
-# Di seguito le variabili che sono state azzerate, notiamo alcune variabili numeriche e alcune variabili binarie associate a precedenti variabili categoriche per cui era stato eseguito il one hot encoding
+# Di seguito le variabili che sono state azzerate, notiamo alcune variabili numeriche e alcune variabili binarie associate a precedenti variabili categoriche per cui era stato eseguito il one hot encoding. Principalmente sono state azzerate variabili per cui si era già osservata la mancata presenza di cluster e per cui non c'erano forti separazioni negli IQR suddivisi per classi
 
 # %%
 coeff = pd.Series(perceptron_search.best_estimator_[1].coef_[0], index=X_train.columns)
@@ -811,15 +811,17 @@ plot_confusion_matrix(cm, perceptron_search.classes_)
 
 # %% [markdown]
 # Dalla matrice di confusione si nota che il modello fatica a distinguere fra le classi Anemia, Normal_RBC e Sickle_cell_anemia. Questo è comprensibile in quanto sono tutte condizioni di malattia legate ai globuli rossi (Normal_RBC). 
-# Analogalmente si nota una difficoltà nella classificazione di Infection e Normal_WBC, in particolare il modello fatica a classificare le cellule di classe infezione come tali. Ciò può essere legato a motivazioni analoghe a Normal_RBC e alla mancanza di bilanciamento delle classi
-# Forte errore fra anemia e Normal_RBC
-# anche fra infezione e normal_WBC
-
-# %%
-coeff.nlargest(4).plot(kind='barh')
+#
+# Analogalmente si nota una difficoltà nella classificazione di Infection e Normal_WBC, in particolare il modello è poco preciso nel classificare le cellule di classe infezione come tali. Ciò può essere legato a motivazioni analoghe a Normal_RBC e alla mancanza di bilanciamento delle classi
 
 # %% [markdown]
-# Si fa un secondo tentativo con l'espansione polinomiale e l'impostazione _balanced_ per il perceptron che regola l'aggiustamento dei pesi in base al bilanciamento delle classi
+# Di seguito le feature evidenziate come più importanti dall'apprendimento
+
+# %%
+np.abs(coeff).nlargest(4).plot(kind='barh')
+
+# %% [markdown]
+# Si fa un secondo tentativo con l'espansione polinomiale
 
 # %%
 poly_perceptron = Pipeline([
