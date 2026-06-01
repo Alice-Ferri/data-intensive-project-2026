@@ -712,22 +712,34 @@ X_train, X_test, y_train, y_test = train_test_split(ds, target, test_size=0.3, r
 # %%
 X_train.head()
 
+
 # %% [markdown]
 # # Addestramento e validazione
 
 # %%
-y_train.head()
+def plot_confusion_matrix(matrix, labels = None):
+    plt.figure(figsize=(6, 5))
+    sns.heatmap(
+        cm,
+        annot=True,      # show counts
+        fmt='d',         # integer format
+        cmap='Blues',
+        cbar_kws={"shrink": .5},
+        xticklabels=labels,
+        yticklabels=labels
+    )
+    
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.title('Confusion Matrix')
+    plt.show()
 
-y_train.shape
-
-# %%
-y_train.info()
-
-# %%
-y_train.head()
 
 # %% [markdown]
 # ## Perceptron
+
+# %% [markdown]
+# Si allena un semplice perceptron e si analizza il comportamento
 
 # %%
 from sklearn.model_selection import GridSearchCV
@@ -737,7 +749,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import Perceptron
 from sklearn.preprocessing import StandardScaler
 
-poly_perceptron = Pipeline([
+std_perceptron = Pipeline([
     ('std', StandardScaler()),
     ('perceptron', Perceptron(n_jobs=-2, early_stopping=True,))
 ])
@@ -749,28 +761,68 @@ parameters = {
     'perceptron__tol': [1e-9, 1e-6, 1e-3, 1, 1e3, 1e6],
 }
 
-perceptron_cv = GridSearchCV(poly_perceptron, parameters, n_jobs=-2, scoring='f1_macro')
+perceptron_search = GridSearchCV(std_perceptron, parameters, n_jobs=-2, scoring='f1_weighted')
 
 # %%
-perceptron_cv.fit(X_train, y_train)
-print('GridSearch on Perceptron finish')
+perceptron_search.fit(X_train, y_train)
 
 # %%
-print('Best parameters:', perceptron_cv.best_params_)  
-print('Best score: {:.4f}%'.format(round(perceptron_cv.best_score_ * 100, 4)))
+print('Best parameters:', perceptron_search.best_params_)
+
+# %% [markdown]
+# Notiamo in particolare che la grid search ha selezionato una versione che attua normalizzazione sulle feature, il che è comprensibile viste le disparate scale e range di valori, e una regolarizzazione l1.
+#
+# Di seguito le variabili che sono state azzerate, notiamo alcune variabili numeriche e alcune variabili binarie associate a precedenti variabili categoriche per cui era stato eseguito il one hot encoding
 
 # %%
-from sklearn.metrics import classification_report
-
-pred = perceptron_cv.predict(X_v)
-classification_report(y_val, pred)
-
+coeff = pd.Series(perceptron_search.best_estimator_[1].coef_[0], index=X_train.columns)
+coeff[coeff == 0]
 
 # %%
-from sklearn.metrics import mean_squared_error
+print('Accuracy on train {:.2f}%'.format(perceptron_search.score(X_train, y_train)*100))
+print('Accuracy on test {:.2f}%'.format(perceptron_search.score(X_test, y_test)*100))
+y_test_pred = perceptron_search.predict(X_test)
+print('F1 weighted score on test {:.2f}'.format(metrics.f1_score(y_test, y_test_pred, average='weighted')))
 
-perc_mse = mean_squared_error(y_test, perceptron_cv.predict(X_test))
-print('MSE: {}'.format(perc_mse))
+# %%
+from sklearn.metrics import confusion_matrix
+cm = confusion_matrix(y_test, y_test_pred)
+plot_confusion_matrix(cm, perceptron_cv.classes_)
+
+# %% [markdown]
+# Dalla matrice di confusione si nota che il modello fatica a distinguere fra le classi Anemia, Normal_RBC e Sickle_cell_anemia. Questo è comprensibile in quanto sono tutte condizioni di malattia legate ai globuli rossi (Normal_RBC). 
+# Analogalmente si nota una difficoltà nella classificazione di Infection e Normal_WBC, in particolare il modello fatica a classificare le cellule di classe infezione come tali. Ciò può essere legato a motivazioni analoghe a Normal_RBC e alla mancanza di bilanciamento delle classi
+# Forte errore fra anemia e Normal_RBC
+# anche fra infezione e normal_WBC
+
+# %% [markdown]
+# Si fa un secondo tentativo con 
+
+# %%
+X_train_nol1 = X_train.drop(columns=coeff[coeff == 0].index)
+X_test_nol1 = X_test.drop(columns=coeff[coeff == 0].index)
+
+# %%
+X_test_nol1
+
+# %%
+poly_perceptron = Pipeline([
+    ('std', StandardScaler()),
+    ('poly', PolynomialFeatures(degree=2)),
+    ('perceptron', Perceptron(n_jobs=-2, early_stopping=True,class_weight='balanced'))
+])
+
+parameters = {
+    'std': [None, StandardScaler()],
+    'perceptron__penalty': [None, 'l1', 'l2', 'elasticnet'],
+    'perceptron__alpha': [0.0001, 0.001, 0.01, 1],
+    'perceptron__tol': [1e-9, 1e-6, 1e-3, 1, 1e3, 1e6],
+}
+
+poly_perceptron_search = GridSearchCV(std_perceptron, parameters, n_jobs=-2, scoring='f1_weighted')
+
+# %%
+poly_perceptron_search.fit(X_train_nol1,y_train)
 
 # %% [markdown]
 # # bilanciamento
