@@ -735,6 +735,18 @@ def plot_confusion_matrix(matrix, labels = None):
     plt.show()
 
 
+# %%
+def dump_statistics(model,X_train,X_test,y_train,y_test):
+    from sklearn.metrics import classification_report
+
+    y_test_pred = model.predict(X_test)
+    y_train_pred = model.predict(X_train)
+    
+    print('Classification report on train set \n' + classification_report(y_train,y_train_pred))
+    print('Classification report on test set \n' + classification_report(y_test,y_test_pred))
+    print('F1 weighted score on test {:.4f}'.format(metrics.f1_score(y_test, y_test_pred, average='weighted')))
+
+
 # %% [markdown]
 # ## Perceptron
 
@@ -778,11 +790,11 @@ print('Best parameters:', perceptron_search.best_params_)
 coeff = pd.Series(perceptron_search.best_estimator_[1].coef_[0], index=X_train.columns)
 coeff[coeff == 0]
 
+# %% [markdown]
+# Si calcola accuratezza e f1 score del modello, notiamo già un risultato promettente per essere il primo allenamento
+
 # %%
-print('Accuracy on train {:.2f}%'.format(perceptron_search.score(X_train, y_train)*100))
-print('Accuracy on test {:.2f}%'.format(perceptron_search.score(X_test, y_test)*100))
-y_test_pred = perceptron_search.predict(X_test)
-print('F1 weighted score on test {:.2f}'.format(metrics.f1_score(y_test, y_test_pred, average='weighted')))
+dump_statistics(perceptron_search,X_train,X_test,y_train,y_test)
 
 # %%
 from sklearn.metrics import confusion_matrix
@@ -823,6 +835,8 @@ poly_perceptron_search = GridSearchCV(std_perceptron, parameters, n_jobs=-2, sco
 
 # %%
 poly_perceptron_search.fit(X_train_nol1,y_train)
+
+# %%
 
 # %% [markdown]
 # # bilanciamento
