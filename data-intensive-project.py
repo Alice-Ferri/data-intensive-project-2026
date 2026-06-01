@@ -676,17 +676,6 @@ cells_wit_nucleus[['chromatin_density','nucleus_area_px']].corr()
 # %% [markdown]
 # # Preparazione dei dati
 
-# %%
-to_encode = ['patient_age_group',
-                'patient_sex',
-                'staining_protocol',
-                 'microscope_model',
-                 'magnification_x',
-                 'image_resolution_px',
-            ]
-
-ds = pd.get_dummies(ds, columns=to_encode, dtype=int)
-
 # %% [markdown]
 # Si preparano ora i dati per essere elaborati dal modello.
 #
@@ -698,6 +687,16 @@ ds = pd.get_dummies(ds, columns=to_encode, dtype=int)
 target = ds['disease_category']
 ds.drop(columns=['disease_category', 'anomaly_label', 'cell_type'], inplace=True)
 
+# %%
+to_encode = ['patient_age_group',
+                'patient_sex',
+                'staining_protocol',
+                 'microscope_model',
+                 'magnification_x',
+                 'image_resolution_px',]
+
+ds = pd.get_dummies(ds, columns=to_encode, dtype=int)
+
 # %% [markdown]
 # Essendo presenti features categoriche si procede a processare i dati attraverso il One-Hot Encoding
 
@@ -706,21 +705,41 @@ target.info()
 
 # %%
 from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(ds, target, test_size=0.3, random_state=43, stratify=target)
 
-X_train, X_test, y_train, y_test = train_test_split(ds, target, test_size=0.3, random_state=43, stratify=target.values)
+# %%
+y_train.head()
 
 # %%
 X_train.head()
 
-
 # %% [markdown]
 # # Addestramento e validazione
 
+# %% [markdown]
+# Si importano le librerie necessarie.
+
+# %%
+from sklearn.model_selection import KFold
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import classification_report
+from sklearn import metrics
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import Perceptron
+from sklearn.metrics import confusion_matrix
 # %%
 def plot_confusion_matrix(matrix, labels = None):
     plt.figure(figsize=(6, 5))
     sns.heatmap(
-        cm,
+        matrix,
         annot=True,      # show counts
         fmt='d',         # integer format
         cmap='Blues',
@@ -737,15 +756,12 @@ def plot_confusion_matrix(matrix, labels = None):
 
 # %%
 def dump_statistics(model,X_train,X_test,y_train,y_test):
-    from sklearn.metrics import classification_report
-
     y_test_pred = model.predict(X_test)
     y_train_pred = model.predict(X_train)
     
     print('Classification report on train set \n' + classification_report(y_train,y_train_pred))
     print('Classification report on test set \n' + classification_report(y_test,y_test_pred))
     print('F1 weighted score on test {:.4f}'.format(metrics.f1_score(y_test, y_test_pred, average='weighted')))
-
 
 # %% [markdown]
 # ## Perceptron
@@ -754,13 +770,6 @@ def dump_statistics(model,X_train,X_test,y_train,y_test):
 # Si allena un semplice perceptron e si analizza il comportamento
 
 # %%
-from sklearn.model_selection import GridSearchCV
-from sklearn import metrics
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import Perceptron
-from sklearn.preprocessing import StandardScaler
-
 std_perceptron = Pipeline([
     ('std', StandardScaler()),
     ('perceptron', Perceptron(n_jobs=-2, early_stopping=True,))
@@ -797,7 +806,6 @@ coeff[coeff == 0]
 dump_statistics(perceptron_search,X_train,X_test,y_train,y_test)
 
 # %%
-from sklearn.metrics import confusion_matrix
 cm = confusion_matrix(y_test, y_test_pred)
 plot_confusion_matrix(cm, perceptron_cv.classes_)
 
@@ -813,7 +821,7 @@ plot_confusion_matrix(cm, perceptron_cv.classes_)
 # %%
 poly_perceptron = Pipeline([
     ('std', StandardScaler()),
-    ('poly', PolynomialFeatures(degree=3)),
+    ('poly', PolynomialFeatures(degree=2)),
     ('perceptron', Perceptron(n_jobs=-2, early_stopping=True,class_weight='balanced'))
 ])
 
@@ -837,6 +845,84 @@ print(poly_perceptron_search.best_params_)
 
 # %% [markdown]
 # Si nota che l'espansione polinomiale ha portato a risultati migliori, guardando in particolare gli f1-score. Usare feature polinomiali che introducano non linearità sembra quindi essere utile per modellare al meglio il dataset
+# %% [markdown]
+# ### Logistic Regression
+
+# %% [markdown]
+# Il modello permette di ottenere un piano di separazione lineare tra le classi
+#
+# Le scelte principali effettuate sono state:
+#
+# - standardizzazione dei dati tramite StandardScaler;
+# - utilizzo della Logistic Regression come classificatore lineare;
+# - scelta del solver saga;
+# - impostazione di un numero massimo di iterazioni pari a 5000;
+# - fissazione del random_state per garantire la riproducibilità dei risultati.
+#
+# Mentre la ricerca ha considerato:
+#
+# - metodo di penalizzazione/regolarizzazione;
+# - valore di C, inverso dell’intensità di regolarizzazione;
+# - valore di tolleranza tol per il criterio di arresto.
+
+# %%
+std_lr = Pipeline([
+    ('std', StandardScaler()),
+    ('lr', LogisticRegression(
+        solver='saga',
+        max_iter=5000,
+        random_state=42
+    ))
+])
+
+parameters = {
+    'lr__penalty': ['l1', 'l2'],
+    'lr__C': [0.01, 0.1, 0.3, 0.8, 1, 3, 10],
+    'lr__tol': [1e-4, 1e-3, 1e-2]
+}
+
+lr_gs = GridSearchCV(std_lr, parameters, cv=5, n_jobs=-2, return_train_score=True, scoring='f1_macro')
+lr_gs.fit(X_train, y_train)
+print("Grid search finish")
+
+# %%
+print('Best parameters:', lr_gs.best_params_)  
+print('Best train score: {:.4f}%\nBest test score: {:.4f}%'.format(round(lr_gs.best_score_ * 100, 4), round(lr_gs.score(X_test, y_test)*100, 4)))
+
+# %%
+lr_imp = pd.Series(lr_gs.best_estimator_[1].coef_[0], index=X_train.columns)
+lr_imp.nlargest(4).plot(kind='barh')
+
+# %% [markdown]
+# La regressione logistica evidenzia come features rilevanti il rapporto citoplasmatico, regolarità della membrana, media del rosso e circolarità
+
+# %% [markdown]
+# ### SVM
+
+# %%
+std_svm = Pipeline([
+    ('std', StandardScaler()),
+    ('svm', SVC())
+])
+
+parameters = {
+    'svm__kernel': ['rbf'],
+    'svm__C': [0.01, 0.1, 1, 10, 100],
+}
+
+svm_gs = GridSearchCV(std_svm, parameters, cv=3, n_jobs=-2, return_train_score=True, scoring='f1_macro')
+svm_gs.fit(X_train, y_train)
+print('Finish SVM Grid Search')
+
+# %%
+print('Best parameters:', svm_gs.best_params_)  
+print('Best train score: {:.4f}%\nBest validation score: {:.4f}%'.format(round(svm_gs.best_score_ * 100, 4), round(svm_gs.score(X_test, y_test)*100, 4)))
+
+# %%
+svm_imp = pd.Series(svm_gs.best_estimator_[1].support_vectors_[0], index=X_train.columns)
+svm_imp.nlargest(4).plot(kind='barh')
 
 # %% [markdown]
 # # bilanciamento
+
+# %%
