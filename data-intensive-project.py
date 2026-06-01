@@ -808,19 +808,12 @@ plot_confusion_matrix(cm, perceptron_cv.classes_)
 # anche fra infezione e normal_WBC
 
 # %% [markdown]
-# Si fa un secondo tentativo con 
-
-# %%
-X_train_nol1 = X_train.drop(columns=coeff[coeff == 0].index)
-X_test_nol1 = X_test.drop(columns=coeff[coeff == 0].index)
-
-# %%
-X_test_nol1
+# Si fa un secondo tentativo con l'espansione polinomiale e l'impostazione _balanced_ per il perceptron che regola l'aggiustamento dei pesi in base al bilanciamento delle classi
 
 # %%
 poly_perceptron = Pipeline([
     ('std', StandardScaler()),
-    ('poly', PolynomialFeatures(degree=2)),
+    ('poly', PolynomialFeatures(degree=3)),
     ('perceptron', Perceptron(n_jobs=-2, early_stopping=True,class_weight='balanced'))
 ])
 
@@ -831,12 +824,19 @@ parameters = {
     'perceptron__tol': [1e-9, 1e-6, 1e-3, 1, 1e3, 1e6],
 }
 
-poly_perceptron_search = GridSearchCV(std_perceptron, parameters, n_jobs=-2, scoring='f1_weighted')
+poly_perceptron_search = GridSearchCV(poly_perceptron, parameters, n_jobs=-2, scoring='f1_weighted')
 
 # %%
-poly_perceptron_search.fit(X_train_nol1,y_train)
+poly_perceptron_search.fit(X_train,y_train)
 
 # %%
+dump_statistics(poly_perceptron_search,X_train,X_test,y_train,y_test)
+
+# %%
+print(poly_perceptron_search.best_params_)
+
+# %% [markdown]
+# Si nota che l'espansione polinomiale ha portato a risultati migliori, guardando in particolare gli f1-score. Usare feature polinomiali che introducano non linearità sembra quindi essere utile per modellare al meglio il dataset
 
 # %% [markdown]
 # # bilanciamento
