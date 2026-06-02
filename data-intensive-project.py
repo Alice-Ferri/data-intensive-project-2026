@@ -886,7 +886,7 @@ parameters = {
     'lr__tol': [1e-4, 1e-3, 1e-2]
 }
 
-lr_gs = GridSearchCV(std_lr, parameters, cv=5, n_jobs=-2, return_train_score=True, scoring='f1_macro')
+lr_gs = GridSearchCV(std_lr, parameters, cv=5, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
 lr_gs.fit(X_train, y_train)
 print("Grid search finish")
 
@@ -926,6 +926,26 @@ print('Best train score: {:.4f}%\nBest validation score: {:.4f}%'.format(round(s
 # %%
 svm_imp = pd.Series(svm_gs.best_estimator_[1].support_vectors_[0], index=X_train.columns)
 svm_imp.nlargest(4).plot(kind='barh')
+
+# %% [markdown]
+# ### Classification Tree
+
+# %%
+from sklearn.tree import DecisionTreeClassifier
+
+std_tree = Pipeline([
+    ('scaler', StandardScaler()),
+    ('tree',DecisionTreeClassifier(random_state=42))  
+])
+parameters = {
+    "tree__max_depth": range(4, 10),
+    "tree__min_samples_split": [.05, .1, .15],
+}
+gs_tree = GridSearchCV(std_tree, parameters, cv=3, n_jobs = -2, return_train_score= True, scoring='f1_weighted')
+gs_tree.fit(X_train, y_train)
+
+# %%
+dump_statistics(gs_tree,X_train,X_test,y_train,y_test)
 
 # %% [markdown]
 # # bilanciamento
