@@ -524,7 +524,6 @@ sns.boxplot(
     palette='Set3',
     hue='disease_category'
 )
-
 plt.title('Cell area per disease category', fontsize=16)
 plt.grid(axis='y', linestyle='--', alpha=0.4)
 plt.xticks(rotation=45)
@@ -576,7 +575,7 @@ ax.legend(title="Disease Category")
 # %% [markdown]
 # Si nota la formazione di cluster per alcune categorie di malattie. Si presuppone quindi che queste feature possano essere determinanti per la predizione della variabile target
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## Collinearità e relazione tra variabili
 
 # %% [markdown]
@@ -796,7 +795,7 @@ print('Best parameters:', perceptron_search.best_params_)
 # Di seguito le variabili che sono state azzerate, notiamo alcune variabili numeriche e alcune variabili binarie associate a precedenti variabili categoriche per cui era stato eseguito il one hot encoding. Principalmente sono state azzerate variabili per cui si era già osservata la mancata presenza di cluster e per cui non c'erano forti separazioni negli IQR suddivisi per classi
 
 # %%
-coeff = pd.Series(perceptron_search.best_estimator_[1].coef_[0], index=X_train.columns)
+coeff = pd.Series(perceptron_search.best_estimator_[1].coef_[0])
 coeff[coeff == 0]
 
 # %% [markdown]
@@ -848,8 +847,13 @@ dump_statistics(poly_perceptron_search,X_train,X_test,y_train,y_test)
 # %%
 print(poly_perceptron_search.best_params_)
 
+# %%
+perceptron_search.best_params_
+
 # %% [markdown]
-# Si nota che l'espansione polinomiale ha portato a risultati migliori, guardando in particolare gli f1-score. Usare feature polinomiali che introducano non linearità sembra quindi essere utile per modellare al meglio il dataset
+# Si nota che l'espansione polinomiale ha portato a risultati migliori, guardando in particolare gli f1-score. Usare feature polinomiali che introducano non linearità sembra quindi essere utile per modellare al meglio il dataset.
+#
+# È stato eseguito un altro tentativo provando ad allenare un perceptron semplice rimuovendo le variabili azzerate dalla L1 e ottenuto un f1-weighted score di 0.7981 che è quindi peggiore. Alterare lo spazio delle feature ha portato quindi a peggiori performance. Era stato eseguito anche un altro esperimento aumentando a 3 il grado del polinomio di `poly_perceptron` portando a risultati migliori, si riconferma quindi che l'espansione polinomiale aiuta a modellare meglio la separazione fra classi
 # %% [markdown]
 # ### Logistic Regression
 
