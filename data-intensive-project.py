@@ -958,7 +958,7 @@ print('Best parameters:', kernel_lr_search.best_params_)
 dump_statistics(kernel_lr_search,X_train,X_test,y_train,y_test)
 
 # %% [markdown]
-# In questo caso si nota un minimo miglioramento. Si ricorda che in questo caso si stanno usando approssimazioni di funzioni kernel e che questo porta intrisecamente ad imprecisione. Inoltre algoritmi come SVM, proprio per natura progettuale, funzionano meglio con le funzioni kernel
+# In questo caso si nota un minimo miglioramento. Si ricorda che in questo caso si stanno usando approssimazioni di funzioni kernel e che questo porta intrisecamente ad imprecisione. Inoltre algoritmi come SVM, proprio per natura progettuale, funzionano meglio con le funzioni kernel. Infatti, con SVM si ha la possibilità di usare direttamente il kernel trick perchè la dimensione della matrice del kernel è molto più contenuta rispetto a logistic regression. Permettendo quindi di portare le feature in uno spazio ad alta dimensionalità senza errori di approssimazione
 
 # %% [markdown]
 # ### SVM
@@ -1000,6 +1000,8 @@ plot_confusion_matrix(svm_cm, svm_search.classes_)
 
 # %% [markdown]
 # Dalla matrice si evidenzia, come per gli altri modelli, la difficoltà nel distinguere le cellule di categoria _infection_ e _anemia_ ma si nota una maggiore precisione nella classificazione di queste.
+
+# %%
 
 # %% [markdown]
 # ### Classification Tree
@@ -1049,7 +1051,7 @@ forest_search.fit(X_train, y_train)
 print('Best parameters:', forest_search.best_params_)  
 
 # %%
-forest_coeff = pd.Series(forest_search.best_estimator_[1].support_vectors_[0], index=X_train.columns)
+forest_coeff = pd.Series(forest_search.best_estimator_[1].coef_[0], index=X_train.columns)
 
 # %%
 np.abs(forest_coeff).nlargest(4).plot(kind='barh')
