@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python [conda env:base] *
+#     display_name: Python (base)
 #     language: python
-#     name: conda-base-py
+#     name: base
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -575,7 +575,7 @@ ax.legend(title="Disease Category")
 # %% [markdown]
 # Si nota la formazione di cluster per alcune categorie di malattie. Si presuppone quindi che queste feature possano essere determinanti per la predizione della variabile target
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ## Collinearità e relazione tra variabili
 
 # %% [markdown]
@@ -887,7 +887,7 @@ std_lr = Pipeline([
 parameters = {
     'lr__penalty': ['l1', 'l2'],
     'lr__C': [0.1, 3, 10, 50, 100],
-    'lr__tol': [1e-4, 1e-3, 1e-2]
+    'lr__tol': [1e-2,1e-3, 1e-2]
 }
 
 lr_search = GridSearchCV(std_lr, parameters, cv=5, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
@@ -919,6 +919,46 @@ plot_confusion_matrix(lr_cm, lr_search.classes_)
 
 # %% [markdown]
 # Dalla matrice di confusione si nota che il modello ha difficoltà a classificare cellule di tipo _infection_ piuttosto che _normal_WBC_ e viceversa, così come _anemia_ e _normal_RBC_ ma si ha una maggiore accuratezza rispetto ai modelli precedenti.
+
+# %% [markdown]
+# Eseguire un'espansione polinomiale si è rivelato utile per il perceptron. Si è provato a svolgere lo stesso tentativo ma usare un'espansione polinomiale con la regressione logistica era troppo complesso in termine di costo computazionale. Si è pensato quindi di usare Nystroem per fornire un'approssimazione di funzioni kernel e quindi portare le variabili in uno spazio a maggiore dimensionalità senza calcolare le nuove variabili
+
+# %%
+from sklearn.kernel_approximation import Nystroem
+
+kernel_lr = Pipeline([
+    ('std', StandardScaler()),
+    ('kernel', Nystroem(random_state=42)),
+    ('kernel_std', StandardScaler()),
+    ('lr', LogisticRegression(
+        solver='saga',
+        max_iter=5000,
+        random_state=42
+    ))
+])
+
+parameters = {
+    'kernel__kernel': ['rbf', 'poly', 'sigmoid'],
+    # n_components is the number of features to construct (higher = better approximation but slower)
+    'kernel__n_components': [50, 100, 200],
+    'lr__penalty': ['l1', 'l2'],
+    'lr__C': [0.1, 3, 10],
+    'lr__tol': [1e-3, 1e-2]
+}
+
+kernel_lr_search = GridSearchCV(kernel_lr, parameters, cv=5, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
+
+# %%
+kernel_lr_search.fit(X_train, y_train)
+
+# %%
+print('Best parameters:', kernel_lr_search.best_params_)
+
+# %%
+dump_statistics(kernel_lr_search,X_train,X_test,y_train,y_test)
+
+# %% [markdown]
+# In questo caso si nota un minimo miglioramento. Si ricorda che in questo caso si stanno usando approssimazioni di funzioni kernel e che questo porta intrisecamente ad imprecisione. Inoltre algoritmi come SVM, proprio per natura progettuale, funzionano meglio con le funzioni kernel
 
 # %% [markdown]
 # ### SVM
