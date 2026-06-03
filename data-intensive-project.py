@@ -1042,7 +1042,7 @@ parameters = {
         "forest__max_features": ["sqrt", "log2", None],
         "forest__min_samples_leaf": [1, 2, 5]
 }
-forest_search = GridSearchCV(std_forest, parameters, cv=3, n_jobs = -2, return_train_score= True, scoring='f1_weighted')#balanced_accuracy
+forest_search = GridSearchCV(std_forest, parameters, cv=3, n_jobs=-2, return_train_score= True, scoring='f1_weighted')#balanced_accuracy
 
 # %%
 forest_search.fit(X_train, y_train)
@@ -1062,6 +1062,49 @@ dump_statistics(forest_search,X_train,X_test,y_train,y_test)
 # %%
 forest_cm = confusion_matrix(y_test, forest_search.predict(X_test))
 plot_confusion_matrix(forest_cm, forest_search.classes_)
+
+# %% [markdown]
+# ### XGBoost
+
+# %%
+# !pip install xgboost
+from xgboost import XGBClassifier
+
+# %%
+
+std_xgb = Pipeline([
+    ('std', StandardScaler()),
+    ('xgb', XGBClassifier(n_jobs=8, objective="multi:softprob"))
+])
+
+parameters = {
+    'xgb__eta': [0.01, 0.05, 0.1],
+    'xgb__min_child_weight': [4, 10],
+    'xgb__max_depth': [3, 4, 5, 6],
+    'xgb__n_estimators': [150, 300],
+    'xgb__alpha': [0.0001, 0.001, 0.01]
+}
+
+xgb_search = GridSearchCV(std_xgb, parameters, cv=3, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
+
+# %%
+xgb_search.fit(X_train, y_train)
+
+# %%
+print('Best parameters:', xgb_search.best_params_)  
+
+# %%
+xgb_coeff = pd.Series(xgb_search.best_estimator_[1].support_vectors_[0], index=X_train.columns)
+
+# %%
+np.abs(xgb_coeff).nlargest(4).plot(kind='barh')
+
+# %%
+dump_statistics(xgb_search,X_train,X_test,y_train,y_test)
+
+# %%
+xgb_cm = confusion_matrix(y_test, forest_search.predict(X_test))
+plot_confusion_matrix(xgb_cm, xgb_search.classes_)
 
 # %% [markdown]
 # # bilanciamento
