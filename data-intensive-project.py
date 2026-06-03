@@ -955,7 +955,7 @@ svm_cm = confusion_matrix(y_test, svm_search.predict(X_test))
 plot_confusion_matrix(svm_cm, svm_search.classes_)
 
 # %% [markdown]
-# Dalla matrice si nota come per gli altri modelli la difficoltà nel distinguere le cellule di categoria _infection_ e _anemia_
+# Dalla matrice si evidenzia, come per gli altri modelli, la difficoltà nel distinguere le cellule di categoria _infection_ e _anemia_ ma si nota una maggiore precisione nella classificazione di queste.
 
 # %% [markdown]
 # ### Classification Tree
@@ -976,6 +976,46 @@ gs_tree.fit(X_train, y_train)
 
 # %%
 dump_statistics(gs_tree,X_train,X_test,y_train,y_test)
+
+# %% [markdown]
+# ### Random Forest
+
+# %%
+import math
+std_forest = Pipeline([
+    ("scaler", StandardScaler()),
+    ("forest", RandomForestClassifier(n_jobs=-1, random_state=42))
+])
+
+
+parameters = {
+        "scaler": [None, StandardScaler()],
+        "forest__n_estimators": [100, 200, 500],
+        "forest__max_depth": [None, 5, 10, 20],
+        "forest__min_samples_split": [2, 5, 10],
+        "forest__max_features": ["sqrt", "log2", None],
+        "forest__min_samples_leaf": [1, 2, 5]
+}
+forest_search = GridSearchCV(std_forest, parameters, cv=3, n_jobs = -2, return_train_score= True, scoring='f1_weighted')#balanced_accuracy
+
+# %%
+forest_search.fit(X_train, y_train)
+
+# %%
+print('Best parameters:', forest_search.best_params_)  
+
+# %%
+forest_coeff = pd.Series(forest_search.best_estimator_[1].support_vectors_[0], index=X_train.columns)
+
+# %%
+np.abs(forest_coeff).nlargest(4).plot(kind='barh')
+
+# %%
+dump_statistics(forest_search,X_train,X_test,y_train,y_test)
+
+# %%
+forest_cm = confusion_matrix(y_test, forest_search.predict(X_test))
+plot_confusion_matrix(forest_cm, forest_search.classes_)
 
 # %% [markdown]
 # # bilanciamento
