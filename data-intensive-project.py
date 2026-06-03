@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python (base)
+#     display_name: Python [conda env:base] *
 #     language: python
-#     name: base
+#     name: conda-base-py
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -882,24 +882,39 @@ std_lr = Pipeline([
 
 parameters = {
     'lr__penalty': ['l1', 'l2'],
-    'lr__C': [0.01, 0.1, 0.3, 0.8, 1, 3, 10],
+    'lr__C': [0.1, 3, 10, 50, 100],
     'lr__tol': [1e-4, 1e-3, 1e-2]
 }
 
-lr_gs = GridSearchCV(std_lr, parameters, cv=5, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
-lr_gs.fit(X_train, y_train)
-print("Grid search finish")
+lr_search = GridSearchCV(std_lr, parameters, cv=5, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
 
 # %%
-print('Best parameters:', lr_gs.best_params_)  
-print('Best train score: {:.4f}%\nBest test score: {:.4f}%'.format(round(lr_gs.best_score_ * 100, 4), round(lr_gs.score(X_test, y_test)*100, 4)))
+lr_search.fit(X_train, y_train)
 
 # %%
-lr_imp = pd.Series(lr_gs.best_estimator_[1].coef_[0], index=X_train.columns)
-lr_imp.nlargest(4).plot(kind='barh')
+print('Best parameters:', lr_search.best_params_)
+
+# %%
+lr_coeff = pd.Series(lr_search.best_estimator_[1].coef_[0], index=X_train.columns)
 
 # %% [markdown]
-# La regressione logistica evidenzia come features rilevanti il rapporto citoplasmatico, regolarità della membrana, media del rosso e circolarità
+# Di seguito le features considerate le più importanti dall'apprendimento:
+
+# %%
+np.abs(lr_coeff).nlargest(4).plot(kind='barh')
+
+# %% [markdown]
+# E' calcolata l'accuratezza e lo score del modello.
+
+# %%
+dump_statistics(lr_search,X_train,X_test,y_train,y_test)
+
+# %%
+lr_cm = confusion_matrix(y_test, lr_search.predict(X_test))
+plot_confusion_matrix(lr_cm, lr_search.classes_)
+
+# %% [markdown]
+# Dalla matrice di confusione si nota che il modello ha difficoltà a classificare cellule di tipo _infection_ piuttosto che _normal_WBC_ e viceversa, così come _anemia_ e _normal_RBC_ ma si ha una maggiore accuratezza rispetto ai modelli precedenti.
 
 # %% [markdown]
 # ### SVM
@@ -911,21 +926,36 @@ std_svm = Pipeline([
 ])
 
 parameters = {
-    'svm__kernel': ['rbf'],
-    'svm__C': [0.01, 0.1, 1, 10, 100],
+    'svm__kernel': ['rbf', 'linear', 'poly'],
+    'svm__C': [0.01, 0.1, 1, 10, 50, 100],
 }
 
-svm_gs = GridSearchCV(std_svm, parameters, cv=3, n_jobs=-2, return_train_score=True, scoring='f1_macro')
-svm_gs.fit(X_train, y_train)
-print('Finish SVM Grid Search')
+svm_search = GridSearchCV(std_svm, parameters, cv=3, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
 
 # %%
-print('Best parameters:', svm_gs.best_params_)  
-print('Best train score: {:.4f}%\nBest validation score: {:.4f}%'.format(round(svm_gs.best_score_ * 100, 4), round(svm_gs.score(X_test, y_test)*100, 4)))
+svm_search.fit(X_train, y_train)
 
 # %%
-svm_imp = pd.Series(svm_gs.best_estimator_[1].support_vectors_[0], index=X_train.columns)
-svm_imp.nlargest(4).plot(kind='barh')
+print('Best parameters:', svm_search.best_params_)  
+
+# %%
+svm_coeff = pd.Series(svm_search.best_estimator_[1].support_vectors_[0], index=X_train.columns)
+
+# %% [markdown]
+# Di seguito si evidenziano le features più rilevanti per il modello
+
+# %%
+np.abs(svm_coeff).nlargest(4).plot(kind='barh')
+
+# %%
+dump_statistics(svm_search,X_train,X_test,y_train,y_test)
+
+# %%
+svm_cm = confusion_matrix(y_test, svm_search.predict(X_test))
+plot_confusion_matrix(svm_cm, svm_search.classes_)
+
+# %% [markdown]
+# Dalla matrice si nota come per gli altri modelli la difficoltà nel distinguere le cellule di categoria _infection_ e _anemia_
 
 # %% [markdown]
 # ### Classification Tree
