@@ -349,6 +349,29 @@ plt.show()
 # %% [markdown]
 # Per entrambe le feature si nota una separazione tra i vari IQR per classe, seppure nel caso di `cell diameter` si abbia comunque un po' di sovrapposizione. Nel caso di nucleus area invece si nota bene, la separazione fra alcune classi come _Normal_RBC_,_Normal_Platelet_,_Anemia_,_Sickle_Cell_Anemia_, che non hanno il nucleo, e _Leukemia_
 
+# %%
+select = (
+    (ds["patient_age_group"] == "Pediatric")
+    &
+    (ds["patient_sex"] == "M")
+)
+filter_anemia = ds.iloc[select]
+plt.figure(figsize=(15, 8))
+
+sns.boxplot(
+    data=filter_anemia, 
+    x='disease_category', 
+    y='rbc_count_millions_per_ul', 
+    palette='Set3',
+    hue='disease_category',
+    legend=False
+)
+
+plt.title('Analisi della Dispersione per Nucleus Area %', fontsize=16)
+plt.grid(axis='y', linestyle='--', alpha=0.4)
+plt.xticks(rotation=45)
+plt.show()
+
 # %% [markdown]
 # Si procede a realizzare gli istogrammi anche per le altre feature numeriche come punteggi legati a caratteristiche morfologiche della cellula
 
@@ -1043,6 +1066,9 @@ gs_tree.fit(X_train, y_train)
 # %%
 dump_statistics(gs_tree,X_train,X_test,y_train,y_test)
 
+# %% [markdown]
+# Il singolo albero di classificazione prodotto produce già dei risultati estremamente promettenti guardando il punteggio. Questo ci suggerisce che una strategia basata sull'utilizzo di alberi potrebbe portare a buoni risultati. Gli alberi, per costruzione, si comportano meglio in presenza di feature ad elevata collinearità, come nel nostro caso. 
+
 # %%
 from sklearn.tree import plot_tree
 plt.figure(figsize=(12, 6))
@@ -1050,6 +1076,9 @@ plot_tree(gs_tree.best_estimator_[1],feature_names=X_train.columns, max_depth=3,
 
 # %% [markdown]
 # ### Random Forest
+
+# %% [markdown]
+# Si procede ad allenare un modello random forest, aspettandosi migliori performance rispetto al semplice classification tree
 
 # %%
 import math
@@ -1081,6 +1110,12 @@ dump_statistics(forest_search,X_train,X_test,y_train,y_test)
 # %%
 forest_cm = confusion_matrix(y_test, forest_search.predict(X_test))
 plot_confusion_matrix(forest_cm, forest_search.classes_)
+
+# %% [markdown]
+# Guardando principalmente gli F1-score si nota un notevole miglioramento rispetto al semplice albero di classificazione. Purtroppo si evidenzia ancora lo stesso problema per cui per i modelli è difficile apprendere la differenza fra _Anemia_ e _Normal_RBC_ e fra _Infection_ e _Normal_WBC_ che porta ad ottenere nello specifico punteggi di recall più bassi per queste classi
+
+# %% [markdown]
+# Rappresentiamo il primo dei 200 alberi generati
 
 # %%
 from sklearn.tree import plot_tree
@@ -1181,3 +1216,20 @@ dump_statistics(xgb_search.best_estimator_,X_res,X_test,y_train_res_enc,y_test_e
 
 # %% [markdown]
 # Notiamo rispetto al modello principale un lieve peggioramento generale. In particolare il modello è meno preciso quindi, aumentano i casi di falsi positivi. Questo risultato può essere dovuto a una situazione di overfitting, infatti si nota un'estrema precisione nel training set. L'introduzione di un elevato numero di campioni sintetici, specialmente per classi poco rappresentate, può aver portato il modello a peggiorare la sua capacità di generalizzazione e ad appredere informazioni che non corrispondono totalmente con la realtà
+
+# %%
+X_train["mentzer_index"] = X_train.mcv_fl / X_train.rbc_count_millions_per_ul
+X_train["mentzer_index"]
+
+# %%
+X_test["mentzer_index"] = X_test.mcv_fl / X_test.rbc_count_millions_per_ul
+
+# %%
+xgb_search.best_estimator_.fit(X_train,y_train_enc)
+
+# %%
+dump_statistics(xgb_search.best_estimator_,X_train,X_test,y_train_enc,y_test_enc)
+
+# %%
+xgb_cm = confusion_matrix(y_test_enc, xgb_search.best_estimator_.predict(X_test))
+plot_confusion_matrix(xgb_cm, xgb_search.classes_)
