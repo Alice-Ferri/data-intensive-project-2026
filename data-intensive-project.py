@@ -1169,6 +1169,28 @@ def model_comparison(mse_1, mse_2, confidence = 0.95):
 
 
 # %% [markdown]
+# ### Riepilogo F1 Score
+
+# %%
+models = [
+    perceptron_search,
+    poly_perceptron_search,
+    svm_search,
+    lr_search,
+    gs_tree,
+    forest_search,
+    xgb_search
+]
+
+for model in models:
+    nome_modello = model.best_estimator_[-1].__class__.__name__
+    miglior_f1 = model.best_score_
+    print(f"{nome_modello}:\n\t\t\t\t{miglior_f1:.4f}")
+
+# %% [markdown]
+# Si notano i migliori score di f1
+
+# %% [markdown]
 # ### SVM vs Perceptron
 
 # %%
