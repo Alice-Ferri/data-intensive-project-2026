@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python (base)
+#     display_name: Python [conda env:base] *
 #     language: python
-#     name: base
+#     name: conda-base-py
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -141,7 +141,7 @@ ds.drop(columns=['cell_id',
 # %%
 ds.head(10)
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # # Parte 2 - Esplorazione dei dati
 
 # %%
@@ -866,7 +866,7 @@ perceptron_search.best_params_
 # Si nota che l'espansione polinomiale ha portato a risultati migliori, guardando in particolare gli f1-score. Usare feature polinomiali che introducano non linearità sembra quindi essere utile per modellare al meglio il dataset.
 #
 # È stato eseguito un altro tentativo provando ad allenare un perceptron semplice rimuovendo le variabili azzerate dalla L1 e ottenuto un f1-weighted score di 0.7981 che è quindi peggiore. Alterare lo spazio delle feature ha portato quindi a peggiori performance. Era stato eseguito anche un altro esperimento aumentando a 3 il grado del polinomio di `poly_perceptron` portando a risultati migliori, si riconferma quindi che l'espansione polinomiale aiuta a modellare meglio la separazione fra classi
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Logistic Regression
 
 # %% [markdown]
@@ -972,7 +972,7 @@ dump_statistics(kernel_lr_search,X_train,X_test,y_train,y_test)
 # %% [markdown]
 # In questo caso si nota un minimo miglioramento. Si ricorda che in questo caso si stanno usando approssimazioni di funzioni kernel e che questo porta intrisecamente ad imprecisione. Inoltre algoritmi come SVM, proprio per natura progettuale, funzionano meglio con le funzioni kernel. Infatti, con SVM si ha la possibilità di usare direttamente il kernel trick perchè la dimensione della matrice del kernel è molto più contenuta rispetto a logistic regression. Permettendo quindi di portare le feature in uno spazio ad alta dimensionalità senza errori di approssimazione
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### SVM
 
 # %%
@@ -1035,7 +1035,7 @@ dump_statistics(svm_search_no_corr,X_train_no_corr,X_test_no_corr,y_train,y_test
 # %% [markdown]
 # L'accuratezza è peggiorata, questo signica che le variabili eliminate, seppur presentano correlazione. Contengono informazioni importanti per l'apprendimento della separazione tra classi
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Classification Tree
 
 # %%
@@ -1060,7 +1060,7 @@ from sklearn.tree import plot_tree
 plt.figure(figsize=(12, 6))
 plot_tree(gs_tree.best_estimator_[1],feature_names=X_train.columns, max_depth=3, filled=True, fontsize=8);
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Random Forest
 
 # %%
@@ -1160,7 +1160,7 @@ plot_confusion_matrix(xgb_cm, xgb_search.classes_, le)
 # Il modello XGBoost ha ottenuto risultati molto positivi, sia per i valori di precisione e di recall nelle varie classi e di conseguenza i punteggi f1 sono prossimi a 1.0. Sono presenti casi in cui la predizione risulta errata, ma sono meno frequenti rispetto agli altri modelli confrontati. 
 # Si nota ancora un problema di recall nelle classi di _anemia_ e _infection_.
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## Model comparison
 
 # %%
@@ -1216,19 +1216,19 @@ for model in models:
 # %% [markdown]
 # Si notano i migliori score di f1
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### SVM vs Perceptron
 
 # %%
 print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_model(perceptron_search)), 4)))
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Logistic Regression vs Perceptron
 
 # %%
 print('Interval {}'.format(np.round(model_comparison(mse_model(lr_search), mse_model(perceptron_search)), 4)))
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### SVM vs Logistic regression
 
 # %%
@@ -1264,24 +1264,7 @@ print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_
 # %%
 print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(svm_search)), 4)))
 
-# %% [markdown]
-# ## XGBoost nested cross
-
-# %%
-from sklearn.model_selection import KFold, cross_val_score
-external_cv = KFold(n_splits=4, shuffle=True, random_state=42)
-
-xgb_cross = cross_val_score(
-    estimator=xgb_search, 
-    X=X_train,
-    y=y_train, 
-    cv=external_cv, 
-    n_jobs=-2,
-    scoring='f1_weighted', 
-)
-# # Ottimizzazione
-
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## Bilanciamento delle classi
 
 # %% [markdown]
@@ -1321,3 +1304,19 @@ dump_statistics(xgb_search.best_estimator_,X_res,X_test,y_train_res_enc,y_test_e
 
 # %% [markdown]
 # Notiamo rispetto al modello principale un lieve peggioramento generale. In particolare il modello è meno preciso quindi, aumentano i casi di falsi positivi. Questo risultato può essere dovuto a una situazione di overfitting, infatti si nota un'estrema precisione nel training set. L'introduzione di un elevato numero di campioni sintetici, specialmente per classi poco rappresentate, può aver portato il modello a peggiorare la sua capacità di generalizzazione e ad appredere informazioni che non corrispondono totalmente con la realtà
+
+# %% [markdown]
+# ## XGBoost nested cross
+
+# %%
+from sklearn.model_selection import KFold, cross_val_score
+external_cv = KFold(n_splits=4, shuffle=True, random_state=42)
+
+xgb_cross = cross_val_score(
+    estimator=xgb_search, 
+    X=X_train,
+    y=y_train, 
+    cv=external_cv, 
+    n_jobs=-2,
+    scoring='f1_weighted', 
+)
