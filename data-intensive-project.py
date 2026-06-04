@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python (base)
+#     display_name: Python [conda env:base] *
 #     language: python
-#     name: base
+#     name: conda-base-py
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -575,7 +575,7 @@ ax.legend(title="Disease Category")
 # %% [markdown]
 # Si nota la formazione di cluster per alcune categorie di malattie. Si presuppone quindi che queste feature possano essere determinanti per la predizione della variabile target
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ## Collinearità e relazione tra variabili
 
 # %% [markdown]
@@ -1068,10 +1068,18 @@ plot_confusion_matrix(forest_cm, forest_search.classes_)
 
 # %%
 # !pip install xgboost
-from xgboost import XGBClassifier
 
 # %%
+from xgboost import XGBClassifier
+from sklearn.preprocessing import LabelEncoder
 
+# %%
+le = LabelEncoder()
+
+y_train_enc = le.fit_transform(y_train)
+y_test_enc = le.transform(y_test)
+
+# %%
 std_xgb = Pipeline([
     ('std', StandardScaler()),
     ('xgb', XGBClassifier(n_jobs=8, objective="multi:softprob"))
@@ -1088,22 +1096,22 @@ parameters = {
 xgb_search = GridSearchCV(std_xgb, parameters, cv=3, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
 
 # %%
-xgb_search.fit(X_train, y_train)
+xgb_search.fit(X_train, y_train_enc)
 
 # %%
 print('Best parameters:', xgb_search.best_params_)  
 
 # %%
-xgb_coeff = pd.Series(xgb_search.best_estimator_[1].support_vectors_[0], index=X_train.columns)
+xgb_coeff = pd.Series(xgb_search.best_estimator_[1].feature_importances_[0], index=X_train.columns)
 
 # %%
 np.abs(xgb_coeff).nlargest(4).plot(kind='barh')
 
 # %%
-dump_statistics(xgb_search,X_train,X_test,y_train,y_test)
+dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc)
 
 # %%
-xgb_cm = confusion_matrix(y_test, forest_search.predict(X_test))
+xgb_cm = confusion_matrix(y_test_enc, xgb_search.predict(X_test))
 plot_confusion_matrix(xgb_cm, xgb_search.classes_)
 
 # %% [markdown]
