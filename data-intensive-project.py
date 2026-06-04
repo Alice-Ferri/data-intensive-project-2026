@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python [conda env:base] *
+#     display_name: Python (base)
 #     language: python
-#     name: conda-base-py
+#     name: base
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -1129,6 +1129,45 @@ xgb_cm = confusion_matrix(y_test_enc, xgb_search.predict(X_test))
 plot_confusion_matrix(xgb_cm, xgb_search.classes_)
 
 # %% [markdown]
-# # bilanciamento
+# # Ottimizzazione
+
+# %% [markdown]
+# ## Bilanciamento delle classi
+
+# %% [markdown]
+# Si prova a fare un tentativo di bilanciamento delle classi per vedere se questo migliora le performance del modello XGBoost.
+# Usiamo SMOTE per generare dati sintetici su cui allenare il modello
 
 # %%
+from imblearn.over_sampling import SMOTE
+
+# %%
+balancer = SMOTE(random_state=42)
+X_res,y_res = balancer.fit_resample(X_train,y_train)
+
+# %%
+X_res["disease_category"] = y_res
+counts = X_res['disease_category'].value_counts()
+num_categorie = len(counts)
+
+colori = plt.cm.tab10(range(num_categorie)) 
+
+plt.bar(counts.index, counts.values, color=colori)
+plt.title('Disease category')
+plt.xlabel('Categorie')
+plt.ylabel('Conteggio')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+X_res.drop(columns=['disease_category'], inplace=True)
+
+# %%
+y_train_res_enc = le.transform(y_res)
+xgb_search.best_estimator_.fit(X_res,y_train_res_enc)
+
+# %%
+dump_statistics(xgb_search.best_estimator_,X_res,X_test,y_train_res_enc,y_test_enc)
+
+# %% [markdown]
+# Notiamo rispetto al modello principale un lieve peggioramento generale. In particolare il modello è meno preciso quindi, aumentano i casi di falsi positivi. Questo risultato può essere dovuto a una situazione di overfitting, infatti si nota un'estrema precisione nel training set. L'introduzione di un elevato numero di campioni sintetici, specialmente per classi poco rappresentate, può aver portato il modello a peggiorare la sua capacità di generalizzazione e ad appredere informazioni che non corrispondono totalmente con la realtà
