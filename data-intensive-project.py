@@ -1043,6 +1043,11 @@ gs_tree.fit(X_train, y_train)
 # %%
 dump_statistics(gs_tree,X_train,X_test,y_train,y_test)
 
+# %%
+from sklearn.tree import plot_tree
+plt.figure(figsize=(12, 6))
+plot_tree(gs_tree.best_estimator_[1],feature_names=X_train.columns, max_depth=3, filled=True, fontsize=8);
+
 # %% [markdown]
 # ### Random Forest
 
@@ -1076,6 +1081,11 @@ dump_statistics(forest_search,X_train,X_test,y_train,y_test)
 # %%
 forest_cm = confusion_matrix(y_test, forest_search.predict(X_test))
 plot_confusion_matrix(forest_cm, forest_search.classes_)
+
+# %%
+from sklearn.tree import plot_tree
+plt.figure(figsize=(12, 6))
+plot_tree(forest_search.best_estimator_[1].estimators_[0],feature_names=X_train.columns, max_depth=3, filled=True, fontsize=8);
 
 # %% [markdown]
 # ### XGBoost
