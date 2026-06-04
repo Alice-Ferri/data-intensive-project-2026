@@ -1315,8 +1315,14 @@ external_cv = KFold(n_splits=4, shuffle=True, random_state=42)
 xgb_cross = cross_val_score(
     estimator=xgb_search, 
     X=X_train,
-    y=y_train, 
+    y=y_train_enc, 
     cv=external_cv, 
-    n_jobs=-2,
+    n_jobs=1,
     scoring='f1_weighted', 
 )
+
+# %%
+print('Best parameters:', xgb_search.best_params_)  
+
+# %%
+dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc,le)
