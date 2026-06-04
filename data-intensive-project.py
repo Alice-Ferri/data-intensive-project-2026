@@ -1001,7 +1001,27 @@ plot_confusion_matrix(svm_cm, svm_search.classes_)
 # %% [markdown]
 # Dalla matrice si evidenzia, come per gli altri modelli, la difficoltà nel distinguere le cellule di categoria _infection_ e _anemia_ ma si nota una maggiore precisione nella classificazione di queste.
 
+# %% [markdown]
+# Il dataset presenta molti casi di collinearità che spesso portano ad
+# un impoverimento delle performance specialmente in modelli lineari.
+# Si fa un tenativo per rimuovere le feature con forte collinearità e
+# vedere se l'accuratezza migliora
+
 # %%
+X_train_no_corr = X_train.drop(columns=['cytoplasm_ratio','circularity','cell_area_px','perimeter_px'])
+X_test_no_corr = X_test.drop(columns=['cytoplasm_ratio','circularity','cell_area_px','perimeter_px'])
+
+# %%
+svm_search_no_corr = GridSearchCV(std_svm, parameters, cv=3, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
+
+# %%
+svm_search_no_corr.fit(X_train_no_corr,y_train)
+
+# %%
+dump_statistics(svm_search_no_corr,X_train_no_corr,X_test_no_corr,y_train,y_test)
+
+# %% [markdown]
+# L'accuratezza è peggiorata, questo signica che le variabili eliminate, seppur presentano correlazione. Contengono informazioni importanti per l'apprendimento della separazione tra classi
 
 # %% [markdown]
 # ### Classification Tree
@@ -1051,12 +1071,6 @@ forest_search.fit(X_train, y_train)
 print('Best parameters:', forest_search.best_params_)  
 
 # %%
-forest_coeff = pd.Series(forest_search.best_estimator_[1].coef_[0], index=X_train.columns)
-
-# %%
-np.abs(forest_coeff).nlargest(4).plot(kind='barh')
-
-# %%
 dump_statistics(forest_search,X_train,X_test,y_train,y_test)
 
 # %%
@@ -1081,14 +1095,19 @@ parameters = {
     'xgb__eta': [0.01, 0.05, 0.1],
     'xgb__min_child_weight': [4, 10],
     'xgb__max_depth': [3, 4, 5, 6],
-    'xgb__n_estimators': [150, 300],
+    'xgb__n_estimators': [150, 300, 500],
     'xgb__alpha': [0.0001, 0.001, 0.01]
 }
 
 xgb_search = GridSearchCV(std_xgb, parameters, cv=3, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
 
 # %%
-xgb_search.fit(X_train, y_train)
+from sklearn.preprocessing import LabelEncoder
+y_train_enc = LabelEncoder().fit_transform(y_train)
+y_test_enc = LabelEncoder().fit_transform(y_test)
+
+# %%
+xgb_search.fit(X_train, y_train_enc)
 
 # %%
 print('Best parameters:', xgb_search.best_params_)  
@@ -1100,7 +1119,7 @@ xgb_coeff = pd.Series(xgb_search.best_estimator_[1].support_vectors_[0], index=X
 np.abs(xgb_coeff).nlargest(4).plot(kind='barh')
 
 # %%
-dump_statistics(xgb_search,X_train,X_test,y_train,y_test)
+dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc)
 
 # %%
 xgb_cm = confusion_matrix(y_test, forest_search.predict(X_test))
