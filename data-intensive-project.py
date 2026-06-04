@@ -1237,3 +1237,19 @@ print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_
 
 # %%
 print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(svm_search)), 4)))
+
+# %% [markdown]
+# ## XGBoost nested cross
+
+# %%
+from sklearn.model_selection import KFold, cross_val_score
+external_cv = KFold(n_splits=4, shuffle=True, random_state=42)
+
+xgb_cross = cross_val_score(
+    estimator=xgb_search, 
+    X=X_train,
+    y=y_train, 
+    cv=external_cv, 
+    n_jobs=-2,
+    scoring='f1_weighted', 
+)
