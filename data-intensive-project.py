@@ -8,9 +8,9 @@
 #       format_version: '1.3'
 #       jupytext_version: 1.18.1
 #   kernelspec:
-#     display_name: Python [conda env:base] *
+#     display_name: Python (base)
 #     language: python
-#     name: conda-base-py
+#     name: base
 # ---
 
 # %% [markdown] colab_type="text" id="view-in-github"
@@ -1014,6 +1014,28 @@ plot_confusion_matrix(svm_cm, svm_search.classes_)
 # Dalla matrice si evidenzia, come per gli altri modelli, la difficoltà nel distinguere le cellule di categoria _infection_ e _anemia_ ma si nota una maggiore precisione nella classificazione di queste.
 
 # %% [markdown]
+# Il dataset presenta molti casi di collinearità che spesso portano ad
+# un impoverimento delle performance specialmente in modelli lineari.
+# Si fa un tenativo per rimuovere le feature con forte collinearità e
+# vedere se l'accuratezza migliora
+
+# %%
+X_train_no_corr = X_train.drop(columns=['cytoplasm_ratio','circularity','cell_area_px','perimeter_px'])
+X_test_no_corr = X_test.drop(columns=['cytoplasm_ratio','circularity','cell_area_px','perimeter_px'])
+
+# %%
+svm_search_no_corr = GridSearchCV(std_svm, parameters, cv=3, n_jobs=-2, return_train_score=True, scoring='f1_weighted')
+
+# %%
+svm_search_no_corr.fit(X_train_no_corr,y_train)
+
+# %%
+dump_statistics(svm_search_no_corr,X_train_no_corr,X_test_no_corr,y_train,y_test)
+
+# %% [markdown]
+# L'accuratezza è peggiorata, questo signica che le variabili eliminate, seppur presentano correlazione. Contengono informazioni importanti per l'apprendimento della separazione tra classi
+
+# %% [markdown]
 # ### Classification Tree
 
 # %%
@@ -1032,6 +1054,11 @@ gs_tree.fit(X_train, y_train)
 
 # %%
 dump_statistics(gs_tree,X_train,X_test,y_train,y_test)
+
+# %%
+from sklearn.tree import plot_tree
+plt.figure(figsize=(12, 6))
+plot_tree(gs_tree.best_estimator_[1],feature_names=X_train.columns, max_depth=3, filled=True, fontsize=8);
 
 # %% [markdown]
 # ### Random Forest
@@ -1061,17 +1088,16 @@ forest_search.fit(X_train, y_train)
 print('Best parameters:', forest_search.best_params_)  
 
 # %%
-forest_coeff = pd.Series(forest_search.best_estimator_[1].coef_[0], index=X_train.columns)
-
-# %%
-np.abs(forest_coeff).nlargest(4).plot(kind='barh')
-
-# %%
 dump_statistics(forest_search,X_train,X_test,y_train,y_test)
 
 # %%
 forest_cm = confusion_matrix(y_test, forest_search.predict(X_test))
 plot_confusion_matrix(forest_cm, forest_search.classes_)
+
+# %%
+from sklearn.tree import plot_tree
+plt.figure(figsize=(12, 6))
+plot_tree(forest_search.best_estimator_[1].estimators_[0],feature_names=X_train.columns, max_depth=3, filled=True, fontsize=8);
 
 # %% [markdown]
 # ### XGBoost
@@ -1102,7 +1128,7 @@ parameters = {
     'xgb__eta': [0.01, 0.05, 0.1],
     'xgb__min_child_weight': [4, 10],
     'xgb__max_depth': [3, 4, 5, 6],
-    'xgb__n_estimators': [150, 300],
+    'xgb__n_estimators': [150, 300, 500],
     'xgb__alpha': [0.0001, 0.001, 0.01]
 }
 
@@ -1253,3 +1279,45 @@ xgb_cross = cross_val_score(
     n_jobs=-2,
     scoring='f1_weighted', 
 )
+# # Ottimizzazione
+
+# %% [markdown]
+# ## Bilanciamento delle classi
+
+# %% [markdown]
+# Si prova a fare un tentativo di bilanciamento delle classi per vedere se questo migliora le performance del modello XGBoost.
+# Usiamo SMOTE per generare dati sintetici su cui allenare il modello
+
+# %%
+from imblearn.over_sampling import SMOTE
+
+# %%
+balancer = SMOTE(random_state=42)
+X_res,y_res = balancer.fit_resample(X_train,y_train)
+
+# %%
+X_res["disease_category"] = y_res
+counts = X_res['disease_category'].value_counts()
+num_categorie = len(counts)
+
+colori = plt.cm.tab10(range(num_categorie)) 
+
+plt.bar(counts.index, counts.values, color=colori)
+plt.title('Disease category')
+plt.xlabel('Categorie')
+plt.ylabel('Conteggio')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+X_res.drop(columns=['disease_category'], inplace=True)
+
+# %%
+y_train_res_enc = le.transform(y_res)
+xgb_search.best_estimator_.fit(X_res,y_train_res_enc)
+
+# %%
+dump_statistics(xgb_search.best_estimator_,X_res,X_test,y_train_res_enc,y_test_enc)
+
+# %% [markdown]
+# Notiamo rispetto al modello principale un lieve peggioramento generale. In particolare il modello è meno preciso quindi, aumentano i casi di falsi positivi. Questo risultato può essere dovuto a una situazione di overfitting, infatti si nota un'estrema precisione nel training set. L'introduzione di un elevato numero di campioni sintetici, specialmente per classi poco rappresentate, può aver portato il modello a peggiorare la sua capacità di generalizzazione e ad appredere informazioni che non corrispondono totalmente con la realtà
