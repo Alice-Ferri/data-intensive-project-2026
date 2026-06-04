@@ -735,8 +735,12 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import Perceptron
 from sklearn.metrics import confusion_matrix
 # %%
-def plot_confusion_matrix(matrix, labels = None):
+def plot_confusion_matrix(matrix, labels = None, label_encoder = None):
     plt.figure(figsize=(6, 5))
+    
+    if label_encoder is not None:
+        labels = label_encoder.classes_
+        
     sns.heatmap(
         matrix,
         annot=True,      # show counts
@@ -754,9 +758,17 @@ def plot_confusion_matrix(matrix, labels = None):
 
 
 # %%
-def dump_statistics(model,X_train,X_test,y_train,y_test):
+def dump_statistics(model,X_train,X_test,y_train,y_test, label_encoder=None):
+    
     y_test_pred = model.predict(X_test)
     y_train_pred = model.predict(X_train)
+
+    if(label_encoder is not None):
+        y_train = label_encoder.inverse_transform(y_train)
+        y_test = label_encoder.inverse_transform(y_test)
+
+        y_train_pred = label_encoder.inverse_transform(y_train_pred)
+        y_test_pred = label_encoder.inverse_transform(y_test_pred)
     
     print('Classification report on train set \n' + classification_report(y_train,y_train_pred))
     print('Classification report on test set \n' + classification_report(y_test,y_test_pred))
@@ -1001,8 +1013,6 @@ plot_confusion_matrix(svm_cm, svm_search.classes_)
 # %% [markdown]
 # Dalla matrice si evidenzia, come per gli altri modelli, la difficoltà nel distinguere le cellule di categoria _infection_ e _anemia_ ma si nota una maggiore precisione nella classificazione di queste.
 
-# %%
-
 # %% [markdown]
 # ### Classification Tree
 
@@ -1073,6 +1083,9 @@ plot_confusion_matrix(forest_cm, forest_search.classes_)
 from xgboost import XGBClassifier
 from sklearn.preprocessing import LabelEncoder
 
+# %% [markdown]
+# Il modello XGBoost richiede che la variabile target y sia rappresentata da classi numeriche:
+
 # %%
 le = LabelEncoder()
 
@@ -1101,20 +1114,104 @@ xgb_search.fit(X_train, y_train_enc)
 # %%
 print('Best parameters:', xgb_search.best_params_)  
 
+# %% [markdown]
+# Si evidenziano le features più importanti per il modello:
+
 # %%
-xgb_coeff = pd.Series(xgb_search.best_estimator_[1].feature_importances_[0], index=X_train.columns)
+xgb_coeff = pd.Series(xgb_search.best_estimator_[1].feature_importances_, index=X_train.columns)
 
 # %%
 np.abs(xgb_coeff).nlargest(4).plot(kind='barh')
 
 # %%
-dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc)
+dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc,le)
 
 # %%
 xgb_cm = confusion_matrix(y_test_enc, xgb_search.predict(X_test))
-plot_confusion_matrix(xgb_cm, xgb_search.classes_)
+plot_confusion_matrix(xgb_cm, xgb_search.classes_, le)
 
 # %% [markdown]
-# # bilanciamento
+# Il modello XGBoost ha ottenuto risultati molto positivi, sia per i valori di precisione e di recall nelle varie classi e di conseguenza i punteggi f1 sono prossimi a 1.0. Sono presenti casi in cui la predizione risulta errata, ma sono meno frequenti rispetto agli altri modelli confrontati. 
+# Si nota ancora un problema di recall nelle classi di _anemia_ e _infection_.
+
+# %% [markdown]
+# ## Model comparison
 
 # %%
+from sklearn.metrics import mean_squared_error
+from scipy.special import softmax
+from scipy import stats
+
+
+# %%
+def mse_model(model):
+    y_one_hot = pd.get_dummies(y_test, columns="disease_category", dtype=int)
+    try:
+        preds = model.predict_proba(X_test)
+    except  AttributeError:
+            scores = model.decision_function(X_test)
+            preds = softmax(scores, axis=1)
+        
+    model_mse = mean_squared_error(y_one_hot, preds)
+    return model_mse
+
+
+# %%
+def model_comparison(mse_1, mse_2, confidence = 0.95):
+    alfa = 1 - confidence
+    z_half_alfa = stats.norm.ppf(1-alfa/2)
+    d = np.abs(mse_1 - mse_2)
+    variance = (mse_1 * (1 - mse_1)) / len(X_test) + (mse_2 * (1 - mse_2)) / len(X_test)
+    d_min = d - z_half_alfa * np.sqrt(variance)
+    d_max = d + z_half_alfa * np.sqrt(variance)
+    
+    return (d_min, d_max)
+
+
+# %% [markdown]
+# ### SVM vs Perceptron
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_model(perceptron_search)), 4)))
+
+# %% [markdown]
+# ### Logistic Regression vs Perceptron
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(lr_search), mse_model(perceptron_search)), 4)))
+
+# %% [markdown]
+# ### SVM vs Logistic regression
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_model(lr_search)), 4)))
+
+# %% [markdown]
+# ### Random Forest vs Classification Tree
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(forest_search), mse_model(gs_tree)), 4)))
+
+# %% [markdown]
+# ### XGBoost vs Classification Tree
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(gs_tree)), 4)))
+
+# %% [markdown]
+# ### XGBoost vs Random Forest
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(forest_search)), 4)))
+
+# %% [markdown]
+# ### SVM vs Random Forest
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_model(forest_search)), 4)))
+
+# %% [markdown]
+# ### XGBoost vs SVM
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(svm_search)), 4)))
