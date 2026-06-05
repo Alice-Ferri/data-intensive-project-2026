@@ -1252,6 +1252,9 @@ for model in models:
 # Si notano i migliori score di f1
 
 # %% [markdown]
+# Di seguito sono riportati gli intervalli di confidenza per la stima del mean squared error, con una confidenza del 95%
+
+# %% [markdown]
 # ### SVM vs Perceptron
 
 # %%
@@ -1298,6 +1301,9 @@ print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_
 
 # %%
 print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(svm_search)), 4)))
+
+# %% [markdown]
+# Dagli intervalli notiamo come il modello che aveva il punteggio F1 più alto, XGBoost, non presenta una differenza di errore che statisticamente significativa comparato a Random forest. Ciò vuolò dire che la differenza nei punteggi di accuratezza e f1 è specifica di questo determinato split del test set. Con altri dati, i valori di MSE potrebbero cambiare e random forest potrebbe avere un errore minore. XGBoost dunque non è il modello migliore, si decide tuttavia di procedere con esso nei prossimi passaggi
 
 # %% [markdown]
 # ## Bilanciamento delle classi
@@ -1353,6 +1359,13 @@ print('Interval {}'.format(np.round(model_comparison(xgb_standard_mse, mse_model
 # %% [markdown]
 # ## Aggiunta nuove feature
 
+# %% [markdown]
+# Le classi più tediose per il modello sono anemia e Normal_RBC, Infection e Normal_WBC. Si pensa quindi di introdurre feature calcolate che possano aumentare la precisione del modello. 
+#
+# Purtroppo il problema legato all'anemia è che è una condizione medica legata a diversi fattori e che esiste in diverse forme anche disparate tra loro, rendendo quindi difficile classificare le cellule in una categoria così ampia e generica. 
+# [Esistono alcuni indici calcolati che aiuterebbero a distinguere fra varie casistiche di anemia](https://www.researchgate.net/publication/367077280_Most_Reliable_Haematological_Indices_for_Diagnosis_of_Iron_Deficiency_Anaemia_from_Non-Iron_Deficiency_Anaemia_in_Reproductive-Age_Females)
+# uno di questi è il mentzer index
+
 # %%
 X_train["mentzer_index"] = X_train.mcv_fl / X_train.rbc_count_millions_per_ul
 X_train["mentzer_index"]
@@ -1397,3 +1410,8 @@ print('Best parameters:', xgb_search.best_params_)
 
 # %%
 dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc,le)
+
+# %%
+print(f"Punteggio medio f1 weighted da nested cross validation {xgb_cross.mean():.4f}")
+
+# %%
