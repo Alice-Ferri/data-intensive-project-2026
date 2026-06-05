@@ -696,7 +696,7 @@ cells_wit_nucleus[['chromatin_density','nucleus_area_px']].corr()
 # Eventualmente, si potrebbe considerare l'introduzione della variabile calcolata `nucleus_area_px`
 
 # %% [markdown]
-# # Preparazione dei dati
+# # Parte 3 - Preparazione dei dati
 
 # %% [markdown]
 # Si preparano ora i dati per essere elaborati dal modello.
@@ -736,7 +736,7 @@ y_train.head()
 X_train.head()
 
 # %% [markdown]
-# # Addestramento e validazione
+# # Parte 4 - Addestramento e validazione
 
 # %% [markdown]
 # Si importano le librerie necessarie.
@@ -1196,7 +1196,7 @@ plot_confusion_matrix(xgb_cm, xgb_search.classes_, le)
 # Si nota ancora un problema di recall nelle classi di _anemia_ e _infection_.
 
 # %% [markdown]
-# ## Model comparison
+# # Parte 5 - Model comparison
 
 # %%
 from sklearn.metrics import mean_squared_error
@@ -1251,19 +1251,19 @@ for model in models:
 # %% [markdown]
 # Si notano i migliori score di f1
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### SVM vs Perceptron
 
 # %%
 print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_model(perceptron_search)), 4)))
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Logistic Regression vs Perceptron
 
 # %%
 print('Interval {}'.format(np.round(model_comparison(mse_model(lr_search), mse_model(perceptron_search)), 4)))
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### SVM vs Logistic regression
 
 # %%
@@ -1307,6 +1307,9 @@ print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_
 # Usiamo SMOTE per generare dati sintetici su cui allenare il modello
 
 # %%
+xgb_standard_mse = mse_model(xgb_search)
+
+# %%
 from imblearn.over_sampling import SMOTE
 
 # %%
@@ -1331,14 +1334,24 @@ plt.show()
 X_res.drop(columns=['disease_category'], inplace=True)
 
 # %%
+from sklearn.base import clone
 y_train_res_enc = le.transform(y_res)
-xgb_search.best_estimator_.fit(X_res,y_train_res_enc)
+xgb_model_balanced_class = clone(xgb_search.best_estimator_) 
+xgb_model_balanced_class.fit(X_res,y_train_res_enc)
 
 # %%
-dump_statistics(xgb_search.best_estimator_,X_res,X_test,y_train_res_enc,y_test_enc)
+dump_statistics(xgb_model_balanced_class,X_res,X_test,y_train_res_enc,y_test_enc)
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(xgb_standard_mse, mse_model(xgb_model_balanced_class)), 4)))
 
 # %% [markdown]
-# Notiamo rispetto al modello principale un lieve peggioramento generale. In particolare il modello è meno preciso quindi, aumentano i casi di falsi positivi. Questo risultato può essere dovuto a una situazione di overfitting, infatti si nota un'estrema precisione nel training set. L'introduzione di un elevato numero di campioni sintetici, specialmente per classi poco rappresentate, può aver portato il modello a peggiorare la sua capacità di generalizzazione e ad appredere informazioni che non corrispondono totalmente con la realtà
+# Notiamo rispetto al modello principale un lieve peggioramento generale. In particolare il modello è meno preciso quindi, aumentano i casi di falsi positivi. Questo risultato può essere dovuto a una situazione di overfitting, infatti si nota un'estrema precisione nel training set. L'introduzione di un elevato numero di campioni sintetici, specialmente per classi poco rappresentate, può aver portato il modello a peggiorare la sua capacità di generalizzazione e ad appredere informazioni che non corrispondono totalmente con la realtà.
+#
+# Ad ogni modo notiamo che l'intervallo di confidenza contiene il valore 0, ergo si deduce che la differenza di errore fra i due modelli non è statisticamente significativa
+
+# %% [markdown]
+# ## Aggiunta nuove feature
 
 # %%
 X_train["mentzer_index"] = X_train.mcv_fl / X_train.rbc_count_millions_per_ul
@@ -1348,14 +1361,21 @@ X_train["mentzer_index"]
 X_test["mentzer_index"] = X_test.mcv_fl / X_test.rbc_count_millions_per_ul
 
 # %%
-xgb_search.best_estimator_.fit(X_train,y_train_enc)
+xgb_model_new_feature = clone(xgb_search.best_estimator_)
+xgb_model_new_feature.fit(X_train,y_train_enc)
 
 # %%
-dump_statistics(xgb_search.best_estimator_,X_train,X_test,y_train_enc,y_test_enc)
+dump_statistics(xgb_model_new_feature,X_train,X_test,y_train_enc,y_test_enc)
 
 # %%
-xgb_cm = confusion_matrix(y_test_enc, xgb_search.best_estimator_.predict(X_test))
+xgb_cm = confusion_matrix(y_test_enc, xgb_model_new_feature.predict(X_test))
 plot_confusion_matrix(xgb_cm, xgb_search.classes_)
+# %%
+print('Interval {}'.format(np.round(model_comparison(xgb_standard_mse, mse_model(xgb_model_new_feature)), 4)))
+
+# %% [markdown]
+# Notiamo anche in questo caso che l'intervallo di confidenza contiene il valore 0, la differenza di errore che si rileva è quindi frutto di questo specifico test set e si potrebbero avere risultati diversi con dati diversi. Si deduce che il cambiamento non ha introdotto alcun miglioramento o peggioramento che abbia valenza statistica
+
 # %% [markdown]
 # ## XGBoost nested cross
 
