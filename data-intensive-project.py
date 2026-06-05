@@ -141,7 +141,7 @@ ds.drop(columns=['cell_id',
 # %%
 ds.head(10)
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # # Parte 2 - Esplorazione dei dati
 
 # %%
@@ -758,8 +758,12 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import Perceptron
 from sklearn.metrics import confusion_matrix
 # %%
-def plot_confusion_matrix(matrix, labels = None):
+def plot_confusion_matrix(matrix, labels = None, label_encoder = None):
     plt.figure(figsize=(6, 5))
+    
+    if label_encoder is not None:
+        labels = label_encoder.classes_
+        
     sns.heatmap(
         matrix,
         annot=True,      # show counts
@@ -777,9 +781,17 @@ def plot_confusion_matrix(matrix, labels = None):
 
 
 # %%
-def dump_statistics(model,X_train,X_test,y_train,y_test):
+def dump_statistics(model,X_train,X_test,y_train,y_test, label_encoder=None):
+    
     y_test_pred = model.predict(X_test)
     y_train_pred = model.predict(X_train)
+
+    if(label_encoder is not None):
+        y_train = label_encoder.inverse_transform(y_train)
+        y_test = label_encoder.inverse_transform(y_test)
+
+        y_train_pred = label_encoder.inverse_transform(y_train_pred)
+        y_test_pred = label_encoder.inverse_transform(y_test_pred)
     
     print('Classification report on train set \n' + classification_report(y_train,y_train_pred))
     print('Classification report on test set \n' + classification_report(y_test,y_test_pred))
@@ -877,7 +889,7 @@ perceptron_search.best_params_
 # Si nota che l'espansione polinomiale ha portato a risultati migliori, guardando in particolare gli f1-score. Usare feature polinomiali che introducano non linearità sembra quindi essere utile per modellare al meglio il dataset.
 #
 # È stato eseguito un altro tentativo provando ad allenare un perceptron semplice rimuovendo le variabili azzerate dalla L1 e ottenuto un f1-weighted score di 0.7981 che è quindi peggiore. Alterare lo spazio delle feature ha portato quindi a peggiori performance. Era stato eseguito anche un altro esperimento aumentando a 3 il grado del polinomio di `poly_perceptron` portando a risultati migliori, si riconferma quindi che l'espansione polinomiale aiuta a modellare meglio la separazione fra classi
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Logistic Regression
 
 # %% [markdown]
@@ -983,7 +995,7 @@ dump_statistics(kernel_lr_search,X_train,X_test,y_train,y_test)
 # %% [markdown]
 # In questo caso si nota un minimo miglioramento. Si ricorda che in questo caso si stanno usando approssimazioni di funzioni kernel e che questo porta intrisecamente ad imprecisione. Inoltre algoritmi come SVM, proprio per natura progettuale, funzionano meglio con le funzioni kernel. Infatti, con SVM si ha la possibilità di usare direttamente il kernel trick perchè la dimensione della matrice del kernel è molto più contenuta rispetto a logistic regression. Permettendo quindi di portare le feature in uno spazio ad alta dimensionalità senza errori di approssimazione
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### SVM
 
 # %%
@@ -1046,7 +1058,7 @@ dump_statistics(svm_search_no_corr,X_train_no_corr,X_test_no_corr,y_train,y_test
 # %% [markdown]
 # L'accuratezza è peggiorata, questo signica che le variabili eliminate, seppur presentano correlazione. Contengono informazioni importanti per l'apprendimento della separazione tra classi
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Classification Tree
 
 # %%
@@ -1074,7 +1086,7 @@ from sklearn.tree import plot_tree
 plt.figure(figsize=(12, 6))
 plot_tree(gs_tree.best_estimator_[1],feature_names=X_train.columns, max_depth=3, filled=True, fontsize=8);
 
-# %% [markdown]
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
 # ### Random Forest
 
 # %% [markdown]
@@ -1132,6 +1144,9 @@ plot_tree(forest_search.best_estimator_[1].estimators_[0],feature_names=X_train.
 from xgboost import XGBClassifier
 from sklearn.preprocessing import LabelEncoder
 
+# %% [markdown]
+# Il modello XGBoost richiede che la variabile target y sia rappresentata da classi numeriche:
+
 # %%
 le = LabelEncoder()
 
@@ -1160,21 +1175,129 @@ xgb_search.fit(X_train, y_train_enc)
 # %%
 print('Best parameters:', xgb_search.best_params_)  
 
+# %% [markdown]
+# Si evidenziano le features più importanti per il modello:
+
 # %%
-xgb_coeff = pd.Series(xgb_search.best_estimator_[1].feature_importances_[0], index=X_train.columns)
+xgb_coeff = pd.Series(xgb_search.best_estimator_[1].feature_importances_, index=X_train.columns)
 
 # %%
 np.abs(xgb_coeff).nlargest(4).plot(kind='barh')
 
 # %%
-dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc)
+dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc,le)
 
 # %%
 xgb_cm = confusion_matrix(y_test_enc, xgb_search.predict(X_test))
-plot_confusion_matrix(xgb_cm, xgb_search.classes_)
+plot_confusion_matrix(xgb_cm, xgb_search.classes_, le)
 
 # %% [markdown]
-# # Ottimizzazione
+# Il modello XGBoost ha ottenuto risultati molto positivi, sia per i valori di precisione e di recall nelle varie classi e di conseguenza i punteggi f1 sono prossimi a 1.0. Sono presenti casi in cui la predizione risulta errata, ma sono meno frequenti rispetto agli altri modelli confrontati. 
+# Si nota ancora un problema di recall nelle classi di _anemia_ e _infection_.
+
+# %% [markdown]
+# ## Model comparison
+
+# %%
+from sklearn.metrics import mean_squared_error
+from scipy.special import softmax
+from scipy import stats
+
+
+# %%
+def mse_model(model):
+    y_one_hot = pd.get_dummies(y_test, columns="disease_category", dtype=int)
+    try:
+        preds = model.predict_proba(X_test)
+    except  AttributeError:
+            scores = model.decision_function(X_test)
+            preds = softmax(scores, axis=1)
+        
+    model_mse = mean_squared_error(y_one_hot, preds)
+    return model_mse
+
+
+# %%
+def model_comparison(mse_1, mse_2, confidence = 0.95):
+    alfa = 1 - confidence
+    z_half_alfa = stats.norm.ppf(1-alfa/2)
+    d = np.abs(mse_1 - mse_2)
+    variance = (mse_1 * (1 - mse_1)) / len(X_test) + (mse_2 * (1 - mse_2)) / len(X_test)
+    d_min = d - z_half_alfa * np.sqrt(variance)
+    d_max = d + z_half_alfa * np.sqrt(variance)
+    
+    return (d_min, d_max)
+
+
+# %% [markdown]
+# ### Riepilogo F1 Score
+
+# %%
+models = [
+    perceptron_search,
+    poly_perceptron_search,
+    svm_search,
+    lr_search,
+    gs_tree,
+    forest_search,
+    xgb_search
+]
+
+for model in models:
+    nome_modello = model.best_estimator_[-1].__class__.__name__
+    miglior_f1 = model.best_score_
+    print(f"{nome_modello}:\n\t\t\t\t{miglior_f1:.4f}")
+
+# %% [markdown]
+# Si notano i migliori score di f1
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# ### SVM vs Perceptron
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_model(perceptron_search)), 4)))
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# ### Logistic Regression vs Perceptron
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(lr_search), mse_model(perceptron_search)), 4)))
+
+# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# ### SVM vs Logistic regression
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_model(lr_search)), 4)))
+
+# %% [markdown]
+# ### Random Forest vs Classification Tree
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(forest_search), mse_model(gs_tree)), 4)))
+
+# %% [markdown]
+# ### XGBoost vs Classification Tree
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(gs_tree)), 4)))
+
+# %% [markdown]
+# ### XGBoost vs Random Forest
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(forest_search)), 4)))
+
+# %% [markdown]
+# ### SVM vs Random Forest
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(svm_search), mse_model(forest_search)), 4)))
+
+# %% [markdown]
+# ### XGBoost vs SVM
+
+# %%
+print('Interval {}'.format(np.round(model_comparison(mse_model(xgb_search), mse_model(svm_search)), 4)))
 
 # %% [markdown]
 # ## Bilanciamento delle classi
@@ -1233,3 +1356,24 @@ dump_statistics(xgb_search.best_estimator_,X_train,X_test,y_train_enc,y_test_enc
 # %%
 xgb_cm = confusion_matrix(y_test_enc, xgb_search.best_estimator_.predict(X_test))
 plot_confusion_matrix(xgb_cm, xgb_search.classes_)
+# %% [markdown]
+# ## XGBoost nested cross
+
+# %%
+from sklearn.model_selection import KFold, cross_val_score
+external_cv = KFold(n_splits=4, shuffle=True, random_state=42)
+
+xgb_cross = cross_val_score(
+    estimator=xgb_search, 
+    X=X_train,
+    y=y_train_enc, 
+    cv=external_cv, 
+    n_jobs=1,
+    scoring='f1_weighted', 
+)
+
+# %%
+print('Best parameters:', xgb_search.best_params_)  
+
+# %%
+dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc,le)
