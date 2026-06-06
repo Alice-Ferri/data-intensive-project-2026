@@ -349,29 +349,6 @@ plt.show()
 # %% [markdown]
 # Per entrambe le feature si nota una separazione tra i vari IQR per classe, seppure nel caso di `cell diameter` si abbia comunque un po' di sovrapposizione. Nel caso di nucleus area invece si nota bene, la separazione fra alcune classi come _Normal_RBC_,_Normal_Platelet_,_Anemia_,_Sickle_Cell_Anemia_, che non hanno il nucleo, e _Leukemia_
 
-# %%
-select = (
-    (ds["patient_age_group"] == "Pediatric")
-    &
-    (ds["patient_sex"] == "M")
-)
-filter_anemia = ds.iloc[select]
-plt.figure(figsize=(15, 8))
-
-sns.boxplot(
-    data=filter_anemia, 
-    x='disease_category', 
-    y='rbc_count_millions_per_ul', 
-    palette='Set3',
-    hue='disease_category',
-    legend=False
-)
-
-plt.title('Analisi della Dispersione per Nucleus Area %', fontsize=16)
-plt.grid(axis='y', linestyle='--', alpha=0.4)
-plt.xticks(rotation=45)
-plt.show()
-
 # %% [markdown]
 # Si procede a realizzare gli istogrammi anche per le altre feature numeriche come punteggi legati a caratteristiche morfologiche della cellula
 
@@ -427,8 +404,8 @@ plt.show()
 # Si nota generalmente, dai boxplot delle feature, che in base alla classe la distribuzione e dispersione dei valori varia.
 #
 # In particolare:
-#
-# *analisi dei singoli boxplot?*
+# I globuli rossi (`Normal_RBC`) e le piastrine (`Platelet`) e le loro variazioni non hanno nucleo cellulare, questo lo si nota nel `cytoplasm_ratio` e nel `chromatin_density`. 
+# Le cellule di classe `Sickle_cell_anemia` hanno degli alti valori di eccentricità e bassi di circolarità
 
 # %% [markdown]
 # ### Analisi feature legate all'immagine
@@ -598,7 +575,7 @@ ax.legend(title="Disease Category")
 # %% [markdown]
 # Si nota la formazione di cluster per alcune categorie di malattie. Si presuppone quindi che queste feature possano essere determinanti per la predizione della variabile target
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ## Collinearità e relazione tra variabili
 
 # %% [markdown]
@@ -995,7 +972,7 @@ dump_statistics(kernel_lr_search,X_train,X_test,y_train,y_test)
 # %% [markdown]
 # In questo caso si nota un minimo miglioramento. Si ricorda che in questo caso si stanno usando approssimazioni di funzioni kernel e che questo porta intrisecamente ad imprecisione. Inoltre algoritmi come SVM, proprio per natura progettuale, funzionano meglio con le funzioni kernel. Infatti, con SVM si ha la possibilità di usare direttamente il kernel trick perchè la dimensione della matrice del kernel è molto più contenuta rispetto a logistic regression. Permettendo quindi di portare le feature in uno spazio ad alta dimensionalità senza errori di approssimazione
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### SVM
 
 # %%
@@ -1058,7 +1035,7 @@ dump_statistics(svm_search_no_corr,X_train_no_corr,X_test_no_corr,y_train,y_test
 # %% [markdown]
 # L'accuratezza è peggiorata, questo signica che le variabili eliminate, seppur presentano correlazione. Contengono informazioni importanti per l'apprendimento della separazione tra classi
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Classification Tree
 
 # %%
@@ -1086,7 +1063,7 @@ from sklearn.tree import plot_tree
 plt.figure(figsize=(12, 6))
 plot_tree(gs_tree.best_estimator_[1],feature_names=X_train.columns, max_depth=3, filled=True, fontsize=8);
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Random Forest
 
 # %% [markdown]
