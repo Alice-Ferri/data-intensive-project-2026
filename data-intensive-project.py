@@ -141,7 +141,7 @@ ds.drop(columns=['cell_id',
 # %%
 ds.head(10)
 
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # # Parte 2 - Esplorazione dei dati
 
 # %%
@@ -830,7 +830,7 @@ print('Best parameters:', perceptron_search.best_params_)
 # Di seguito le variabili che sono state azzerate, notiamo alcune variabili numeriche e alcune variabili binarie associate a precedenti variabili categoriche per cui era stato eseguito il one hot encoding. Principalmente sono state azzerate variabili per cui si era già osservata la mancata presenza di cluster e per cui non c'erano forti separazioni negli IQR suddivisi per classi
 
 # %%
-coeff = pd.Series(perceptron_search.best_estimator_[1].coef_[0])
+coeff = pd.Series(perceptron_search.best_estimator_[1].coef_[0], index=X_train.columns)
 coeff[coeff == 0]
 
 # %% [markdown]
@@ -889,7 +889,7 @@ perceptron_search.best_params_
 # Si nota che l'espansione polinomiale ha portato a risultati migliori, guardando in particolare gli f1-score. Usare feature polinomiali che introducano non linearità sembra quindi essere utile per modellare al meglio il dataset.
 #
 # È stato eseguito un altro tentativo provando ad allenare un perceptron semplice rimuovendo le variabili azzerate dalla L1 e ottenuto un f1-weighted score di 0.7981 che è quindi peggiore. Alterare lo spazio delle feature ha portato quindi a peggiori performance. Era stato eseguito anche un altro esperimento aumentando a 3 il grado del polinomio di `poly_perceptron` portando a risultati migliori, si riconferma quindi che l'espansione polinomiale aiuta a modellare meglio la separazione fra classi
-# %% [markdown] jp-MarkdownHeadingCollapsed=true
+# %% [markdown]
 # ### Logistic Regression
 
 # %% [markdown]
@@ -1346,7 +1346,7 @@ xgb_model_balanced_class = clone(xgb_search.best_estimator_)
 xgb_model_balanced_class.fit(X_res,y_train_res_enc)
 
 # %%
-dump_statistics(xgb_model_balanced_class,X_res,X_test,y_train_res_enc,y_test_enc)
+dump_statistics(xgb_model_balanced_class,X_res,X_test,y_train_res_enc,y_test_enc,le)
 
 # %%
 print('Interval {}'.format(np.round(model_comparison(xgb_standard_mse, mse_model(xgb_model_balanced_class)), 4)))
@@ -1378,11 +1378,11 @@ xgb_model_new_feature = clone(xgb_search.best_estimator_)
 xgb_model_new_feature.fit(X_train,y_train_enc)
 
 # %%
-dump_statistics(xgb_model_new_feature,X_train,X_test,y_train_enc,y_test_enc)
+dump_statistics(xgb_model_new_feature,X_train,X_test,y_train_enc,y_test_enc,le)
 
 # %%
 xgb_cm = confusion_matrix(y_test_enc, xgb_model_new_feature.predict(X_test))
-plot_confusion_matrix(xgb_cm, xgb_search.classes_)
+plot_confusion_matrix(xgb_cm, xgb_search.classes_,le)
 # %%
 print('Interval {}'.format(np.round(model_comparison(xgb_standard_mse, mse_model(xgb_model_new_feature)), 4)))
 
@@ -1392,26 +1392,29 @@ print('Interval {}'.format(np.round(model_comparison(xgb_standard_mse, mse_model
 # %% [markdown]
 # ## XGBoost nested cross
 
+# %% [markdown]
+# Si introduce l'utilizzo della nested cross validation applicata al modello XGBoost per ottenere una misura più veritiera delle performance del modello
+
+# %%
+X_tot = pd.concat([X_train,X_test],ignore_index=True)
+y_tot = pd.concat([y_train,y_test],ignore_index=True)
+
+# %%
+y_tot_enc = le.fit_transform(y_tot)
+
 # %%
 from sklearn.model_selection import KFold, cross_val_score
+
 external_cv = KFold(n_splits=4, shuffle=True, random_state=42)
 
 xgb_cross = cross_val_score(
     estimator=xgb_search, 
-    X=X_train,
-    y=y_train_enc, 
+    X=X_tot,
+    y=y_tot_enc, 
     cv=external_cv, 
     n_jobs=1,
     scoring='f1_weighted', 
 )
 
 # %%
-print('Best parameters:', xgb_search.best_params_)  
-
-# %%
-dump_statistics(xgb_search,X_train,X_test,y_train_enc,y_test_enc,le)
-
-# %%
 print(f"Punteggio medio f1 weighted da nested cross validation {xgb_cross.mean():.4f}")
-
-# %%
